@@ -84,5 +84,4 @@ git fetch official && git merge official/master
 
 ## 已知限制
 
-- gfx1151 的 MMQ kernel 未就绪——MoE 场景禁用 MMQ（ggml-cuda/mmq.cu）
-- 上游 CI 已移除——请本地构建验证
+- gfx1151 上 ROCmFPX 的 MMQ kernel 尚未适配——MoE 场景禁用 MMQ（实测 mmq off 69.17 vs on 67.26 t/s，kernel 适配完成后可重启用）

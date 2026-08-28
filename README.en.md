@@ -80,5 +80,4 @@ git fetch official && git merge official/master
 
 ## Known limitations
 
-- gfx1151 MMQ kernels not ready - MMQ disabled for MoE (ggml-cuda/mmq.cu)
-- Upstream CI removed - validate with local builds
+- ROCmFPX MMQ kernels for gfx1151 not adapted yet - MMQ disabled for MoE (measured 69.17 t/s vs 67.26 t/s with MMQ on; re-enable once kernels are ready)
