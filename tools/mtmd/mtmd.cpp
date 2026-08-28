@@ -817,6 +817,13 @@ struct mtmd_context {
                     }
                     image_preproc = std::make_unique<mtmd_image_preprocessor_dyn_size>(ctx_v);
                 } break;
+            case PROJECTOR_TYPE_LOCATEANYTHING:
+                {
+                    // <img> ... (image embeddings) ... </img>  per processor_config.json
+                    img_beg = "<img>";
+                    img_end = "</img>";
+                    image_preproc = std::make_unique<mtmd_image_preprocessor_dyn_size>(ctx_v);
+                } break;
             case PROJECTOR_TYPE_LIGHTONOCR:
                 {
                     // <|im_start|> ... (image embeddings) ... <|im_end|>
