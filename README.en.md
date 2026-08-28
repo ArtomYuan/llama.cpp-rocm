@@ -54,9 +54,28 @@ Artifacts land in `build/bin/` (llama-server / llama-quantize / llama-bench + sh
 
 ### Quantize
 
+All ROCmFPX formats supported (GGML types):
+
+| Type | Description | bpw |
+|:--|:--|:--|
+| Q2_0_ROCMFPX | 2-bit (S40 codebook + dual UE4M3 scales) | - |
+| Q3_0_ROCMFPX | 3-bit (UE4M3-scale reference layout) | - |
+| Q4_0_ROCMFP4 | 4-bit (dual-scale UE4M3 + packed FP4 blocks) | 4.50 |
+| Q4_0_ROCMFP4_FAST | 4-bit (single-scale speed layout) | 4.25 |
+| Q6_0_ROCMFPX | 6-bit (UE4M3-scale reference layout) | - |
+| Q8_0_ROCMFPX | 8-bit (UE4M3-scale reference layout) | - |
+| TURBO3_0 | TurboQuant 3-bit KV-cache | 3.50 |
+| TURBO4_0 | TurboQuant 4-bit KV-cache | 4.50 |
+
 ```bash
+# Basic quantize
 build/bin/llama-quantize --allow-requantize <source.gguf> <output.gguf> Q4_0_ROCMFP4_FAST 32
+
+# Token embedding variants (FTYPE wrappers): LEAN = Q5_K embeddings / COHERENT = Q6_K embeddings / STRIX = Strix Halo quality/speed recipe
+build/bin/llama-quantize --allow-requantize <source.gguf> <output.gguf> Q4_0_ROCMFP4_FAST_COHERENT 32
 ```
+
+File-level (FTYPE) variants: `Q4_0_ROCMFP4` / `Q4_0_ROCMFP4_LEAN` (Q5_K embeddings) / `Q4_0_ROCMFP4_COHERENT` (Q6_K embeddings) / `Q4_0_ROCMFP4_FAST` / `Q4_0_ROCMFP4_FAST_COHERENT` / `Q4_0_ROCMFP4_STRIX` / `Q4_0_ROCMFP4_STRIX_LEAN`.
 
 ### Inference service (systemd user service example)
 

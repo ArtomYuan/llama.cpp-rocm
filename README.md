@@ -58,9 +58,28 @@ cmake --build build -j $(nproc) --target llama-server llama-quantize llama-bench
 
 ### 量化
 
+支持全部 ROCmFPX 格式（GGML 类型）：
+
+| 类型 | 说明 | bpw |
+|:--|:--|:--|
+| Q2_0_ROCMFPX | 2-bit（S40 codebook + dual UE4M3 scales） | — |
+| Q3_0_ROCMFPX | 3-bit（UE4M3-scale 参考布局） | — |
+| Q4_0_ROCMFP4 | 4-bit（dual-scale UE4M3 + packed FP4 blocks） | 4.50 |
+| Q4_0_ROCMFP4_FAST | 4-bit（single-scale 速度布局） | 4.25 |
+| Q6_0_ROCMFPX | 6-bit（UE4M3-scale 参考布局） | — |
+| Q8_0_ROCMFPX | 8-bit（UE4M3-scale 参考布局） | — |
+| TURBO3_0 | TurboQuant 3-bit KV-cache | 3.50 |
+| TURBO4_0 | TurboQuant 4-bit KV-cache | 4.50 |
+
 ```bash
+# 基础量化
 build/bin/llama-quantize --allow-requantize <源模型.gguf> <输出.gguf> Q4_0_ROCMFP4_FAST 32
+
+# 带 token embedding 变体（封装层 FTYPE）：LEAN = Q5_K embeddings / COHERENT = Q6_K embeddings / STRIX = Strix Halo 质量·速度配方
+build/bin/llama-quantize --allow-requantize <源模型.gguf> <输出.gguf> Q4_0_ROCMFP4_FAST_COHERENT 32
 ```
+
+文件级封装（FTYPE）变体：`Q4_0_ROCMFP4` / `Q4_0_ROCMFP4_LEAN`（Q5_K embeddings）/ `Q4_0_ROCMFP4_COHERENT`（Q6_K embeddings）/ `Q4_0_ROCMFP4_FAST` / `Q4_0_ROCMFP4_FAST_COHERENT` / `Q4_0_ROCMFP4_STRIX` / `Q4_0_ROCMFP4_STRIX_LEAN`。
 
 ### 推理服务（systemd 用户服务示例）
 
