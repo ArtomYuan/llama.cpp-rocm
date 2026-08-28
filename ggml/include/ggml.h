@@ -430,7 +430,21 @@ extern "C" {
         GGML_TYPE_NVFP4   = 40, // NVFP4 (4 blocks, E4M3 scale)
         GGML_TYPE_Q1_0    = 41,
         GGML_TYPE_Q2_0    = 42,
-        GGML_TYPE_COUNT   = 43,
+        // --- ROCmFP4 / ROCmFPx (walcz-de/llama.cpp-ROCmFP4) ---------------------
+        // Ported from charlie12345/ROCmFPX (MIT). The IDs 100+ are deliberate and
+        // MUST NOT be renumbered: published GGUFs on Hugging Face already encode
+        // them, and the gap 43..99 keeps upstream free to assign sequential IDs
+        // without ever colliding with this fork. The cost is a sparse
+        // type_traits[] table; that is the price of reading existing weights.
+        GGML_TYPE_Q4_0_ROCMFP4      = 100, // dual-scale UE4M3 + packed FP4 blocks (4.50 bpw)
+        GGML_TYPE_Q4_0_ROCMFP4_FAST = 101, // single-scale speed layout (4.25 bpw)
+        GGML_TYPE_Q6_0_ROCMFPX      = 102, // ROCmFPx 6-bit UE4M3-scale reference layout
+        GGML_TYPE_Q8_0_ROCMFPX      = 103, // ROCmFPx 8-bit UE4M3-scale reference layout
+        GGML_TYPE_Q3_0_ROCMFPX      = 104, // ROCmFPx 3-bit UE4M3-scale reference layout
+        GGML_TYPE_TURBO3_0          = 105, // TurboQuant 3-bit KV-cache (3.5 bpw)
+        GGML_TYPE_TURBO4_0          = 106, // TurboQuant 4-bit KV-cache (4.5 bpw)
+        GGML_TYPE_Q2_0_ROCMFPX      = 107, // ROCmFPx 2-bit S40 codebook + dual UE4M3 scales
+        GGML_TYPE_COUNT   = 108,
     };
 
     // precision
@@ -475,6 +489,20 @@ extern "C" {
         GGML_FTYPE_MOSTLY_NVFP4   = 26, // except 1d tensors
         GGML_FTYPE_MOSTLY_Q1_0    = 27, // except 1d tensors
         GGML_FTYPE_MOSTLY_Q2_0    = 28, // except 1d tensors
+        // --- ROCmFP4 / ROCmFPx file types ---------------------------------------
+        // Same rationale as ggml_type above: these values are baked into published
+        // GGUFs (the Strix Halo builds ship ftype 103/105/106) and must stay put.
+        GGML_FTYPE_MOSTLY_Q4_0_ROCMFP4               = 100, // except 1d tensors
+        GGML_FTYPE_MOSTLY_Q4_0_ROCMFP4_LEAN          = 101, // + Q5_K token embeddings
+        GGML_FTYPE_MOSTLY_Q4_0_ROCMFP4_COHERENT      = 102, // + Q6_K token embeddings
+        GGML_FTYPE_MOSTLY_Q4_0_ROCMFP4_FAST          = 103, // single-scale speed layout
+        GGML_FTYPE_MOSTLY_Q4_0_ROCMFP4_FAST_COHERENT = 104, // fast + Q6_K token embeddings
+        GGML_FTYPE_MOSTLY_Q4_0_ROCMFP4_STRIX         = 105, // Strix Halo quality/speed recipe
+        GGML_FTYPE_MOSTLY_Q4_0_ROCMFP4_STRIX_LEAN    = 106, // Strix Halo size-biased K/V recipe
+        GGML_FTYPE_MOSTLY_Q6_0_ROCMFPX               = 110, // ROCmFPx 6-bit reference layout
+        GGML_FTYPE_MOSTLY_Q8_0_ROCMFPX               = 111, // ROCmFPx 8-bit reference layout
+        GGML_FTYPE_MOSTLY_Q3_0_ROCMFPX               = 112, // ROCmFPx 3-bit reference layout
+        GGML_FTYPE_MOSTLY_Q2_0_ROCMFPX               = 113, // ROCmFPx 2-bit S40 codebook layout
     };
 
     // available tensor operations:

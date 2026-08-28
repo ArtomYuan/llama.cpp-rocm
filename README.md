@@ -1,3 +1,13 @@
+> **llama.cpp-ROCmFP4** — this fork carries the **ROCmFP4 / ROCmFPx** 4-bit
+> weight-quantization formats (ggml types 100–107) for AMD RDNA3.5 APUs
+> (Strix Point / Strix Halo / Gorgon), re-hosted on a current upstream base.
+>
+> The formats, their CPU reference implementations and the original HIP/Vulkan
+> kernels are the work of **[charlie12345/ROCmFPX](https://github.com/charlie12345/ROCmFPX)**
+> (MIT). This tree ports them onto a newer llama.cpp (post MMQ refactor) and
+> re-expresses the FP4 MMQ kernels for the current architecture. See
+> `THIRD_PARTY_NOTICES.md` for the full provenance.
+
 # llama.cpp
 
 ![llama](https://raw.githubusercontent.com/ggml-org/llama.brand/refs/heads/master/cover/llama-cpp/cover-llama-cpp-dark.svg)

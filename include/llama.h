@@ -156,6 +156,24 @@ extern "C" {
         LLAMA_FTYPE_MOSTLY_NVFP4         = 39, // except 1d tensors
         LLAMA_FTYPE_MOSTLY_Q1_0          = 40, // except 1d tensors
         LLAMA_FTYPE_MOSTLY_Q2_0          = 41, // except 1d tensors
+        // --- ROCmFP4 / ROCmFPx (ported from charlie12345/ROCmFPX, MIT) ---------
+        LLAMA_FTYPE_MOSTLY_Q4_0_ROCMFP4               = 100, // except 1d tensors
+        LLAMA_FTYPE_MOSTLY_Q4_0_ROCMFP4_LEAN          = 101, // + Q5_K token embeddings
+        LLAMA_FTYPE_MOSTLY_Q4_0_ROCMFP4_COHERENT      = 102, // + Q6_K token embeddings
+        LLAMA_FTYPE_MOSTLY_Q4_0_ROCMFP4_FAST          = 103, // single-scale speed layout
+        LLAMA_FTYPE_MOSTLY_Q4_0_ROCMFP4_FAST_COHERENT = 104, // fast + Q6_K token embeddings
+        LLAMA_FTYPE_MOSTLY_Q4_0_ROCMFP4_STRIX         = 105, // Strix Halo quality/speed recipe
+        LLAMA_FTYPE_MOSTLY_Q4_0_ROCMFP4_STRIX_LEAN    = 106, // Strix Halo size-biased K/V recipe
+        LLAMA_FTYPE_MOSTLY_Q6_0_ROCMFPX               = 110,
+        LLAMA_FTYPE_MOSTLY_Q8_0_ROCMFPX               = 111,
+        LLAMA_FTYPE_MOSTLY_Q3_0_ROCMFPX               = 112,
+        LLAMA_FTYPE_MOSTLY_Q3_0_ROCMFPX_AGENT         = 113,
+        LLAMA_FTYPE_MOSTLY_Q6_0_ROCMFPX_AGENT         = 114,
+        LLAMA_FTYPE_MOSTLY_Q8_0_ROCMFPX_AGENT         = 115,
+        LLAMA_FTYPE_MOSTLY_Q6_0_ROCMFPX_LEAN          = 116,
+        LLAMA_FTYPE_MOSTLY_Q6_0_ROCMFPX_AGENT_LEAN    = 117,
+        LLAMA_FTYPE_MOSTLY_Q2_0_ROCMFPX               = 119,
+
 
         LLAMA_FTYPE_GUESSED = 1024, // not specified in the model file
     };

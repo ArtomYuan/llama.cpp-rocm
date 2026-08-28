@@ -79,7 +79,19 @@ else()
         ../ggml-cuda/template-instances/fattn-vec-instance-f16-f16.cu
         ../ggml-cuda/template-instances/fattn-vec-instance-q4_0-q4_0.cu
         ../ggml-cuda/template-instances/fattn-vec-instance-q8_0-q8_0.cu
-        ../ggml-cuda/template-instances/fattn-vec-instance-bf16-bf16.cu)
+        ../ggml-cuda/template-instances/fattn-vec-instance-bf16-bf16.cu
+        # ROCmFP4 / ROCmFPx. fattn.cu enumerates FlashAttention cases for these
+        # types outside the FA_ALL_QUANTS guard, so their instances have to be in
+        # the default list too - otherwise a static link fails on undefined
+        # ggml_cuda_flash_attn_ext_vec_case symbols. A shared build hides this,
+        # which is why it only showed up in the containerised (BUILD_SHARED_LIBS=OFF)
+        # build. This is the HIP backend's own source list; the sibling list in
+        # ggml-cuda/CMakeLists.txt does not cover it.
+        ../ggml-cuda/template-instances/fattn-vec-instance-q4_0_rocmfp4-q4_0_rocmfp4.cu
+        ../ggml-cuda/template-instances/fattn-vec-instance-q4_0_rocmfp4_fast-q4_0_rocmfp4_fast.cu
+        ../ggml-cuda/template-instances/fattn-vec-instance-q3_0_rocmfpx-q3_0_rocmfpx.cu
+        ../ggml-cuda/template-instances/fattn-vec-instance-q6_0_rocmfpx-q6_0_rocmfpx.cu
+        ../ggml-cuda/template-instances/fattn-vec-instance-q8_0_rocmfpx-q8_0_rocmfpx.cu)
 endif()
 
 ggml_add_backend_library(ggml-hip
