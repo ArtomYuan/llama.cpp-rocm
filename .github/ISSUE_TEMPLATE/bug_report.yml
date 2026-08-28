@@ -1,0 +1,66 @@
+name: 🐛 错误报告（Bug Report）
+description: 报告引擎问题（构建失败、量化错误、推理异常、视觉塔问题等）
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢报告问题！提交前请先搜索现有 issue，确认没有被报告过。
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 用一句话描述遇到的问题
+      placeholder: 例如：使用 Q4_0_ROCMFP4_FAST 量化的模型在 gfx1151 上加载后崩溃
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 按顺序列出能复现该问题的步骤
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      description: 你期望发生什么？
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么？（错误信息、崩溃、错误输出等）
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息
+      description: 填写与问题相关的环境信息
+      value: |
+        - 模型：
+        - 量化类型（如 Q4_0_ROCMFP4_FAST）：
+        - 引擎版本（git commit 或构建日期）：
+        - 运行环境（GPU / ROCm 版本 / 系统）：
+        - 相关启动参数：
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志
+      description: 粘贴相关日志输出（构建输出、运行日志、崩溃堆栈等）
+      render: shell
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充信息
+      description: 任何有助于定位问题的其他信息（截图、相关 issue、已尝试的排查等）

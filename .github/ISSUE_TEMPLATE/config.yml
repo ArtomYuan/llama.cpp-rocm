@@ -1,11 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Got an idea?
-    url: https://github.com/ggml-org/llama.cpp/discussions/categories/ideas
-    about: Pop it there. It may then become an enhancement ticket.
-  - name: Got a question?
-    url: https://github.com/ggml-org/llama.cpp/discussions/categories/q-a
-    about: Ask a question there!
-  - name: Want to contribute?
-    url: https://github.com/ggml-org/llama.cpp/wiki/contribute
-    about: Head to the contribution guide page of the wiki for areas you can help with
+  - name: 💬 讨论与问答
+    url: https://github.com/ArtomYuan/llama.cpp-rocm/discussions
+    about: 有想法或使用问题？先到讨论区聊聊。
+  - name: 🚨 报告安全漏洞
+    url: https://github.com/ArtomYuan/llama.cpp-rocm/security/advisories/new
+    about: 安全漏洞请通过私密渠道报告，不要公开 issue（详见 SECURITY.md）。
