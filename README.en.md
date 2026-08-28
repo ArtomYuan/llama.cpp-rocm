@@ -72,12 +72,6 @@ ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --po
 - llama-server serves an OpenAI-compatible API (default `/v1`), pick your own `--port`
 - Vision/grounding models need `--special` (enables `<ref>/<box>` special tokens); plain text models do not
 
-### Sync upstream
-
-```bash
-git fetch official && git merge official/master
-```
-
 ## Known limitations
 
 - ROCmFPX MMQ kernels for gfx1151 not adapted yet - MMQ disabled for MoE (measured 69.17 t/s vs 67.26 t/s with MMQ on; re-enable once kernels are ready)

@@ -76,12 +76,6 @@ ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --po
 - llama-server 提供 OpenAI 兼容 API（默认 `/v1`），`--port` 自选
 - 视觉/定位模型需 `--special`（启用 `<ref>/<box>` 特殊 token）；纯文本模型不需要
 
-### 同步上游
-
-```bash
-git fetch official && git merge official/master
-```
-
 ## 已知限制
 
 - gfx1151 上 ROCmFPX 的 MMQ kernel 尚未适配——MoE 场景禁用 MMQ（实测 mmq off 69.17 vs on 67.26 t/s，kernel 适配完成后可重启用）
