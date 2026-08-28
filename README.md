@@ -47,4 +47,3 @@ git fetch official && git merge official/master
 
 - CI：上游 workflow 已移除（融合库本地构建验证，不跑官方矩阵）
 - 已知限制：gfx1151 的 MMQ kernel 未就绪——MoE 场景禁用 MMQ（ggml-cuda/mmq.cu）
-- 详细开发记录与运维：见本地 `docs/deployments/llama-cpp-rocm.md`
