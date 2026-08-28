@@ -66,11 +66,11 @@ Type=simple
 Environment=HSA_OVERRIDE_GFX_VERSION=11.5.1
 Environment=HIP_VISIBLE_DEVICES=0
 Environment=LD_LIBRARY_PATH=/path/to/engine/bin
-ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --port 8030
+ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --port <port>
 ```
 
-- Text models: `llama-server -m <model.gguf> --port 8010`
-- Vision/grounding models: `llama-server --special -m <model.gguf> --port 8030` (`--special` enables `<ref>/<box>` special tokens)
+- llama-server serves an OpenAI-compatible API (default `/v1`), pick your own `--port`
+- Vision/grounding models need `--special` (enables `<ref>/<box>` special tokens); plain text models do not
 
 ### Sync upstream
 

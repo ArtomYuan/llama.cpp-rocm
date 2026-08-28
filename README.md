@@ -70,11 +70,11 @@ Type=simple
 Environment=HSA_OVERRIDE_GFX_VERSION=11.5.1
 Environment=HIP_VISIBLE_DEVICES=0
 Environment=LD_LIBRARY_PATH=/path/to/engine/bin
-ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --port 8030
+ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --port <port>
 ```
 
-- 文本模型：`llama-server -m <模型.gguf> --port 8010`
-- 视觉/定位模型：`llama-server --special -m <模型.gguf> --port 8030`（`--special` 启用 `<ref>/<box>` 特殊 token）
+- llama-server 提供 OpenAI 兼容 API（默认 `/v1`），`--port` 自选
+- 视觉/定位模型需 `--special`（启用 `<ref>/<box>` 特殊 token）；纯文本模型不需要
 
 ### 同步上游
 
