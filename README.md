@@ -2,12 +2,9 @@
 
 面向 AMD Strix Halo（Ryzen AI MAX+ 395 / Radeon 8060S / gfx1151）的融合引擎：官方 llama.cpp master + **ROCmFPX 量化格式** + **多模态视觉塔** 三合一。
 
-[English](README.en.md) | [中文](README.zh-CN.md)
+[English](README.en.md)
 
 ---
-# llama.cpp-rocm
-
-面向 AMD Strix Halo（Ryzen AI MAX+ 395 / Radeon 8060S / gfx1151）的融合引擎：官方 llama.cpp master + **ROCmFPX 量化格式** + **多模态视觉塔** 三合一。
 
 ## 这是什么
 
