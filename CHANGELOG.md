@@ -20,3 +20,7 @@
 ### 文档
 
 - 添加 README（定位/构建/使用）。
+- README 重写（上游差异/功能/优化实测/部署）。
+- 双语 README（中文默认 + English）。
+- 量化格式全清单（Q4_0_ROCMFP4 家族 9 变体 + Qx_ROCMFPX 家族 9 类型）。
+- 社区文件：CONTRIBUTING / CODE_OF_CONDUCT / SECURITY / Issue 模板。
