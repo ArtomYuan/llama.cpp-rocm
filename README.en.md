@@ -54,28 +54,45 @@ Artifacts land in `build/bin/` (llama-server / llama-quantize / llama-bench + sh
 
 ### Quantize
 
-All ROCmFPX formats supported (GGML types):
+All ROCmFPX formats supported (llama-quantize output types):
+
+**Q4_0_ROCMFP4 family (4-bit):**
 
 | Type | Description | bpw |
 |:--|:--|:--|
-| Q2_0_ROCMFPX | 2-bit (S40 codebook + dual UE4M3 scales) | - |
-| Q3_0_ROCMFPX | 3-bit (UE4M3-scale reference layout) | - |
-| Q4_0_ROCMFP4 | 4-bit (dual-scale UE4M3 + packed FP4 blocks) | 4.50 |
-| Q4_0_ROCMFP4_FAST | 4-bit (single-scale speed layout) | 4.25 |
-| Q6_0_ROCMFPX | 6-bit (UE4M3-scale reference layout) | - |
-| Q8_0_ROCMFPX | 8-bit (UE4M3-scale reference layout) | - |
-| TURBO3_0 | TurboQuant 3-bit KV-cache | 3.50 |
-| TURBO4_0 | TurboQuant 4-bit KV-cache | 4.50 |
+| Q4_0_ROCMFP4 | ROCmFP4 UE4M3-scale base | 4.50 |
+| Q4_0_ROCMFP4_EVEN | even tensor conversion (implies --pure) | 4.50 |
+| Q4_0_ROCMFP4_LEAN | + Q5_K token embeddings | 4.60 |
+| Q4_0_ROCMFP4_COHERENT | + Q6_K token embeddings | 4.70 |
+| Q4_0_ROCMFP4_FAST | single-scale speed layout | 4.25 |
+| Q4_0_ROCMFP4_FAST_EVEN | fast even tensor conversion (implies --pure) | 4.25 |
+| Q4_0_ROCMFP4_FAST_COHERENT | fast + Q6_K token embeddings | ~4.45 |
+| Q4_0_ROCMFP4_STRIX | Strix Halo attn-K/V quality recipe | ~4.49 |
+| Q4_0_ROCMFP4_STRIX_LEAN | Strix K/V + Q5_K token embeddings | ~4.38 |
+
+**Qx_ROCMFPX family:**
+
+| Type | Description | bpw |
+|:--|:--|:--|
+| Q2_0_ROCMFPX | 2-bit S40 codebook + dual UE4M3 scales | 2.50 |
+| Q3_0_ROCMFPX | 3-bit reference layout | 3.50 |
+| Q6_0_ROCMFPX | 6-bit reference layout | 6.50 |
+| Q8_0_ROCMFPX | 8-bit reference layout | 8.25 |
+| Q3_0_ROCMFPX_AGENT | agent/tool-call coherent Q3 routing | 3.50 |
+| Q6_0_ROCMFPX_AGENT | agent/tool-call coherent Q6 routing | 6.50 |
+| Q8_0_ROCMFPX_AGENT | agent/tool-call coherent Q8 routing | 8.25 |
+| Q6_0_ROCMFPX_LEAN | size/speed-biased Q6 routing | 6.50 |
+| Q6_0_ROCMFPX_AGENT_LEAN | agent Q6 routing (no Q8-heavy boosts) | 6.50 |
+
+**KV-cache types** (runtime parameters, not quantize outputs): TURBO3_0 (3.50 bpw) / TURBO4_0 (4.50 bpw)
 
 ```bash
 # Basic quantize
 build/bin/llama-quantize --allow-requantize <source.gguf> <output.gguf> Q4_0_ROCMFP4_FAST 32
 
-# Token embedding variants (FTYPE wrappers): LEAN = Q5_K embeddings / COHERENT = Q6_K embeddings / STRIX = Strix Halo quality/speed recipe
-build/bin/llama-quantize --allow-requantize <source.gguf> <output.gguf> Q4_0_ROCMFP4_FAST_COHERENT 32
+# Agent routing variant (tool-call/coding scenarios)
+build/bin/llama-quantize --allow-requantize <source.gguf> <output.gguf> Q8_0_ROCMFPX_AGENT 32
 ```
-
-File-level (FTYPE) variants: `Q4_0_ROCMFP4` / `Q4_0_ROCMFP4_LEAN` (Q5_K embeddings) / `Q4_0_ROCMFP4_COHERENT` (Q6_K embeddings) / `Q4_0_ROCMFP4_FAST` / `Q4_0_ROCMFP4_FAST_COHERENT` / `Q4_0_ROCMFP4_STRIX` / `Q4_0_ROCMFP4_STRIX_LEAN`.
 
 ### Inference service (systemd user service example)
 

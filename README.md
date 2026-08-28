@@ -58,28 +58,45 @@ cmake --build build -j $(nproc) --target llama-server llama-quantize llama-bench
 
 ### 量化
 
-支持全部 ROCmFPX 格式（GGML 类型）：
+支持全部 ROCmFPX 格式（llama-quantize 输出类型）：
+
+**Q4_0_ROCMFP4 家族（4-bit）：**
 
 | 类型 | 说明 | bpw |
 |:--|:--|:--|
-| Q2_0_ROCMFPX | 2-bit（S40 codebook + dual UE4M3 scales） | — |
-| Q3_0_ROCMFPX | 3-bit（UE4M3-scale 参考布局） | — |
-| Q4_0_ROCMFP4 | 4-bit（dual-scale UE4M3 + packed FP4 blocks） | 4.50 |
-| Q4_0_ROCMFP4_FAST | 4-bit（single-scale 速度布局） | 4.25 |
-| Q6_0_ROCMFPX | 6-bit（UE4M3-scale 参考布局） | — |
-| Q8_0_ROCMFPX | 8-bit（UE4M3-scale 参考布局） | — |
-| TURBO3_0 | TurboQuant 3-bit KV-cache | 3.50 |
-| TURBO4_0 | TurboQuant 4-bit KV-cache | 4.50 |
+| Q4_0_ROCMFP4 | ROCmFP4 UE4M3-scale 基础版 | 4.50 |
+| Q4_0_ROCMFP4_EVEN | 偶数张量转换（隐含 --pure） | 4.50 |
+| Q4_0_ROCMFP4_LEAN | + Q5_K token embeddings | 4.60 |
+| Q4_0_ROCMFP4_COHERENT | + Q6_K token embeddings | 4.70 |
+| Q4_0_ROCMFP4_FAST | single-scale 速度布局 | 4.25 |
+| Q4_0_ROCMFP4_FAST_EVEN | fast 偶数张量转换（隐含 --pure） | 4.25 |
+| Q4_0_ROCMFP4_FAST_COHERENT | fast + Q6_K token embeddings | ~4.45 |
+| Q4_0_ROCMFP4_STRIX | Strix Halo attn-K/V 质量配方 | ~4.49 |
+| Q4_0_ROCMFP4_STRIX_LEAN | Strix K/V + Q5_K token embeddings | ~4.38 |
+
+**Qx_ROCMFPX 家族：**
+
+| 类型 | 说明 | bpw |
+|:--|:--|:--|
+| Q2_0_ROCMFPX | 2-bit S40 codebook + dual UE4M3 scales | 2.50 |
+| Q3_0_ROCMFPX | 3-bit 参考布局 | 3.50 |
+| Q6_0_ROCMFPX | 6-bit 参考布局 | 6.50 |
+| Q8_0_ROCMFPX | 8-bit 参考布局 | 8.25 |
+| Q3_0_ROCMFPX_AGENT | agent/工具调用连贯性 Q3 路由 | 3.50 |
+| Q6_0_ROCMFPX_AGENT | agent/工具调用连贯性 Q6 路由 | 6.50 |
+| Q8_0_ROCMFPX_AGENT | agent/工具调用连贯性 Q8 路由 | 8.25 |
+| Q6_0_ROCMFPX_LEAN | 尺寸/速度偏向 Q6 路由 | 6.50 |
+| Q6_0_ROCMFPX_AGENT_LEAN | agent Q6 路由（无 Q8-heavy 提升） | 6.50 |
+
+**KV-cache 类型**（运行时参数，非量化输出）：TURBO3_0（3.50 bpw）/ TURBO4_0（4.50 bpw）
 
 ```bash
 # 基础量化
 build/bin/llama-quantize --allow-requantize <源模型.gguf> <输出.gguf> Q4_0_ROCMFP4_FAST 32
 
-# 带 token embedding 变体（封装层 FTYPE）：LEAN = Q5_K embeddings / COHERENT = Q6_K embeddings / STRIX = Strix Halo 质量·速度配方
-build/bin/llama-quantize --allow-requantize <源模型.gguf> <输出.gguf> Q4_0_ROCMFP4_FAST_COHERENT 32
+# Agent 路由变体（工具调用/编码场景）
+build/bin/llama-quantize --allow-requantize <源模型.gguf> <输出.gguf> Q8_0_ROCMFPX_AGENT 32
 ```
-
-文件级封装（FTYPE）变体：`Q4_0_ROCMFP4` / `Q4_0_ROCMFP4_LEAN`（Q5_K embeddings）/ `Q4_0_ROCMFP4_COHERENT`（Q6_K embeddings）/ `Q4_0_ROCMFP4_FAST` / `Q4_0_ROCMFP4_FAST_COHERENT` / `Q4_0_ROCMFP4_STRIX` / `Q4_0_ROCMFP4_STRIX_LEAN`。
 
 ### 推理服务（systemd 用户服务示例）
 
