@@ -1,6 +1,6 @@
 # llama.cpp-rocm
 
-面向 AMD Strix Halo（Ryzen AI MAX+ 395 / Radeon 8060S / gfx1151）的融合引擎：官方 llama.cpp master + **ROCmFPX 量化格式** + **多模态视觉塔** 三合一。
+面向 AMD Strix Halo（Ryzen AI MAX+ 395 / Radeon 8060S / gfx1151）的融合引擎：官方 llama.cpp master + **ROCmFPX 量化格式** + **多模态视觉塔**三合一。
 
 [English](README.en.md)
 
@@ -20,7 +20,7 @@ llama.cpp 的独立维护分支，把三个能力整合到一个引擎：
 
 ## 与上游的不同
 
-- **ROCmFPX 量化支持**：上游 llama.cpp 无法加载 ROCmFP4/FP8 格式——本引擎原生支持（GGML 类型 100-107），并带量化工具 `llama-quantize`
+- **ROCmFPX 量化支持**：上游 llama.cpp 无法加载 ROCmFP4/FP8 格式——本引擎原生支持（GGML 类型100-107），并带量化工具 `llama-quantize`
 - **多模态视觉**：合并 mtmd 视觉栈，支持视觉模型与 Grounding 定位模型（`--special` 模式输出 `<ref>/<box>`）
 - **纯 ROCm HIP 后端**：构建仅含 HIP（无 Vulkan），设备锁定 ROCm0——无后端选择歧义
 - **MMQ 决策**：gfx1151 的 MMQ kernel 尚未就绪，MoE 场景禁用 MMQ（实测 69.17 t/s vs 默认 67.26 t/s）
