@@ -1,5 +1,16 @@
 # 更新日志
 
+## [Unreleased]
+
+### 引擎
+
+- 上游同步：ggml-org/llama.cpp master → e107984bc（117 commits，含 ROCm radix TOP_K for long rows #27466、mtmd const 传播、DeepSeek4V projector、Nemotron-3-Puzzle 模型、Metal sparse FA、Vulkan FA dequant 修复等）。
+- 本地 TOP_K chunked-merge fix（f883d66c8）退役：上游 radix 实现覆盖同一 HIP 长行崩溃场景（#27021），实测快 3.5-13.5x。
+
+### 文档
+
+- 上游同步记录（2026-09-03，merge commit e1697de49）。
+
 ## [v0.1.0] (2026-08-28)
 
 ### 新增
