@@ -70,29 +70,28 @@ list(APPEND GGML_SOURCES_ROCM ${SRCS})
 file(GLOB   SRCS "../ggml-cuda/template-instances/mmf*.cu")
 list(APPEND GGML_SOURCES_ROCM ${SRCS})
 
-if (GGML_CUDA_FA_ALL_QUANTS)
-    file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-vec*.cu")
-    list(APPEND GGML_SOURCES_ROCM ${SRCS})
-    add_compile_definitions(GGML_CUDA_FA_ALL_QUANTS)
-else()
-    list(APPEND GGML_SOURCES_ROCM
-        ../ggml-cuda/template-instances/fattn-vec-instance-f16-f16.cu
-        ../ggml-cuda/template-instances/fattn-vec-instance-q4_0-q4_0.cu
-        ../ggml-cuda/template-instances/fattn-vec-instance-q8_0-q8_0.cu
-        ../ggml-cuda/template-instances/fattn-vec-instance-bf16-bf16.cu
-        # ROCmFP4 / ROCmFPx. fattn.cu enumerates FlashAttention cases for these
-        # types outside the FA_ALL_QUANTS guard, so their instances have to be in
-        # the default list too - otherwise a static link fails on undefined
-        # ggml_cuda_flash_attn_ext_vec_case symbols. A shared build hides this,
-        # which is why it only showed up in the containerised (BUILD_SHARED_LIBS=OFF)
-        # build. This is the HIP backend's own source list; the sibling list in
-        # ggml-cuda/CMakeLists.txt does not cover it.
-        ../ggml-cuda/template-instances/fattn-vec-instance-q4_0_rocmfp4-q4_0_rocmfp4.cu
-        ../ggml-cuda/template-instances/fattn-vec-instance-q4_0_rocmfp4_fast-q4_0_rocmfp4_fast.cu
-        ../ggml-cuda/template-instances/fattn-vec-instance-q3_0_rocmfpx-q3_0_rocmfpx.cu
-        ../ggml-cuda/template-instances/fattn-vec-instance-q6_0_rocmfpx-q6_0_rocmfpx.cu
-        ../ggml-cuda/template-instances/fattn-vec-instance-q8_0_rocmfpx-q8_0_rocmfpx.cu)
-endif()
+ggml_cuda_fattn_vec_instances(${CMAKE_CURRENT_SOURCE_DIR}/../ggml-cuda SRCS)
+list(APPEND GGML_SOURCES_ROCM ${SRCS})
+# ROCmFP4 / ROCmFPx FA instances (local fusion fork): fattn.cu registers these
+# outside the GGML_CUDA_FA_QUANTS list, so their instances and COMPILED defines
+# must be added explicitly, otherwise a static link fails on undefined
+# ggml_cuda_flash_attn_ext_vec_case symbols.
+list(APPEND GGML_SOURCES_ROCM
+    ../ggml-cuda/template-instances/fattn-vec-instance-q4_0_rocmfp4-q4_0_rocmfp4.cu
+    ../ggml-cuda/template-instances/fattn-vec-instance-q4_0_rocmfp4_fast-q4_0_rocmfp4_fast.cu
+    ../ggml-cuda/template-instances/fattn-vec-instance-q3_0_rocmfpx-q3_0_rocmfpx.cu
+    ../ggml-cuda/template-instances/fattn-vec-instance-q6_0_rocmfpx-q6_0_rocmfpx.cu
+    ../ggml-cuda/template-instances/fattn-vec-instance-q8_0_rocmfpx-q8_0_rocmfpx.cu
+    ../ggml-cuda/template-instances/fattn-vec-instance-turbo3_0-turbo3_0.cu
+    ../ggml-cuda/template-instances/fattn-vec-instance-turbo4_0-turbo4_0.cu
+)
+add_compile_definitions(
+    GGML_CUDA_FA_Q4_0_ROCMFP4_Q4_0_ROCMFP4=1
+    GGML_CUDA_FA_Q4_0_ROCMFP4_FAST_Q4_0_ROCMFP4_FAST=1
+    GGML_CUDA_FA_Q3_0_ROCMFPX_Q3_0_ROCMFPX=1
+    GGML_CUDA_FA_Q6_0_ROCMFPX_Q6_0_ROCMFPX=1
+    GGML_CUDA_FA_Q8_0_ROCMFPX_Q8_0_ROCMFPX=1
+)
 
 ggml_add_backend_library(ggml-hip
                          ${GGML_HEADERS_ROCM}
