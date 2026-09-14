@@ -16,6 +16,8 @@ llama.cpp 的独立维护分支，把三个能力整合到一个引擎：
 | charlie12345/ROCmFPX | ROCmFPX 量化格式（ROCmFP2/3/4/6/8 + TurboQuant） |
 | yuuko-eth mtmd-grounders | 多模态视觉塔（含 LocateAnything 定位投影器） |
 
+- 当前同步上游点：ggml-org/llama.cpp `97e4ca735`（2026-09-14，窗口 `e107984bc..97e4ca735` = 172 commits，merge commit `cfeb42ff6`）。
+
 **一个二进制**：ROCmFPX 量化模型（文本）+ 视觉/定位模型都能跑，无需切换引擎。
 
 ## 与上游的不同

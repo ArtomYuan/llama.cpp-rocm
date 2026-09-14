@@ -2,6 +2,8 @@
 
 A fusion engine for AMD Strix Halo (Ryzen AI MAX+ 395 / Radeon 8060S / gfx1151): upstream llama.cpp master + **ROCmFPX quantization** + **multimodal vision tower** in a single binary.
 
+[中文](README.md)
+
 ## What is this
 
 An independently maintained branch of llama.cpp that merges three capabilities into one engine:
@@ -11,6 +13,8 @@ An independently maintained branch of llama.cpp that merges three capabilities i
 | Upstream llama.cpp (continuously synced) | All baseline inference capabilities |
 | charlie12345/ROCmFPX | ROCmFPX quantization formats (ROCmFP2/3/4/6/8 + TurboQuant) |
 | yuuko-eth mtmd-grounders | Multimodal vision tower (incl. LocateAnything grounding projector) |
+
+- Current upstream sync point: ggml-org/llama.cpp `97e4ca735` (2026-09-14; window `e107984bc..97e4ca735` = 172 commits, merge commit `cfeb42ff6`).
 
 **One binary**: runs both ROCmFPX-quantized models (text) and vision/grounding models, no engine switching.
 
