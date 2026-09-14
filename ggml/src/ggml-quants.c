@@ -6,6 +6,9 @@
 #include "ggml-cpu/ggml-cpu-impl.h"
 #include "ggml-cpu.h"
 
+#include "../rocmfp4/rocmfp4.h"
+#include "../rocmfpx/rocmfpx.h"
+
 #include <math.h>
 #include <string.h>
 #include <assert.h>
@@ -5656,6 +5659,31 @@ bool ggml_validate_row_data(enum ggml_type type, const void * data, size_t nbyte
         case GGML_TYPE_I64:
             // nothing to validate
             break;
+        // ROCmFP4 / ROCmFPx / TurboQuant local fusion types (IDs 100..107). Their
+        // validators live in ../rocmfp4/ and ../rocmfpx/ and were previously never
+        // wired into this upstream dispatch, so quantization to these types aborted
+        // with "invalid type N". TurboQuant blocks carry an FP16 L2-norm field `d`
+        // that is validated the same way as the standard block scales.
+        case GGML_TYPE_Q4_0_ROCMFP4:
+            return rocmfp4_validate_row_data(data, nbytes);
+        case GGML_TYPE_Q4_0_ROCMFP4_FAST:
+            return rocmfp4_validate_row_data_fast(data, nbytes);
+        case GGML_TYPE_Q2_0_ROCMFPX:
+            return rocmfpx_validate_row_data_fp2(data, nbytes);
+        case GGML_TYPE_Q3_0_ROCMFPX:
+            return rocmfpx_validate_row_data_fp3(data, nbytes);
+        case GGML_TYPE_Q6_0_ROCMFPX:
+            return rocmfpx_validate_row_data_fp6(data, nbytes);
+        case GGML_TYPE_Q8_0_ROCMFPX:
+            return rocmfpx_validate_row_data_fp8(data, nbytes);
+        case GGML_TYPE_TURBO3_0:
+            {
+                VALIDATE_ROW_DATA_D_F16_IMPL(block_turbo3_0, data, nb);
+            } break;
+        case GGML_TYPE_TURBO4_0:
+            {
+                VALIDATE_ROW_DATA_D_F16_IMPL(block_turbo4_0, data, nb);
+            } break;
         default:
             {
                 fprintf(stderr, "%s: invalid type %d\n", __func__, type);
