@@ -116,4 +116,4 @@ ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --po
 
 ## 已知限制
 
-- 双尺度 `Q4_0_ROCMFP4`（非 `_FAST`）在 MMQ 路径下存在已知数值缺陷（NMSE 0.01–0.04，超 `max_nmse_err=5e-4` 阈值）；生产用 `_FAST`（单尺度）不受影响，详见 CHANGELOG。
+- 双尺度 `Q4_0_ROCMFP4`（非 `_FAST`）：MMQ 数值缺陷已在 v2026.9.16 修复；旧版本可设 `GGML_HIP_NO_ROCMFP4_MMQ=1` 规避。

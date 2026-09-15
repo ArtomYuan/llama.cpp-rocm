@@ -23,7 +23,7 @@ An independently maintained branch of llama.cpp that merges three capabilities i
 - **ROCmFPX quantization**: upstream llama.cpp cannot load ROCmFP4/FP8 formats - this engine supports them natively (GGML types 100-107) and ships `llama-quantize` for conversion
 - **Multimodal vision**: merged mtmd vision stack, supports vision models and grounding models (`--special` mode emits `<ref>/<box>`)
 - **Pure ROCm HIP backend**: HIP-only build (no Vulkan), device locked to ROCm0 - no backend ambiguity
-- **MMQ decision**: gfx1151 MMQ kernels are not ready yet; MMQ is disabled for MoE (measured 69.17 t/s vs 67.26 t/s default)
+- **MMQ decision**: MMQ is on by default (including MoE); measured prefill speedup ~2x (pp512 +105%, pp2048 +109%, 2026-09-15). The earlier "not ready / disabled" wording came from a wrong metric (69.17 vs 67.26 was tg32/batch-1, which goes through MMVQ, not MMQ) and has been corrected.
 - **No upstream CI**: upstream CI matrix removed (validated by local builds)
 
 ## Features
@@ -37,8 +37,8 @@ An independently maintained branch of llama.cpp that merges three capabilities i
 
 | Item | Result |
 |---|---|
-| Ornith 35B.A3B (Q4_ROCmFPX_FAST) | tg32 **69.17 t/s** (mmq off) |
-| Same model, mmq on | 67.26 t/s (MMQ not ready - disabled is optimal) |
+| Ornith 35B.A3B (Q4_ROCmFPX_FAST) | tg32 **69.17 t/s** (decode, via MMVQ - does not go through MMQ) |
+| Same model, prefill (pp512) | **1172.66 t/s** (MMQ on; +105% vs off) |
 | Qwen 27B (Q4_ROCmFPX_FAST) | tg32 12.17 t/s |
 | Pure ROCm0 vs old Vulkan path | combined engine+backend improvement (see CHANGELOG) |
 
@@ -114,4 +114,4 @@ ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --po
 
 ## Known limitations
 
-- ROCmFPX MMQ kernels for gfx1151 not adapted yet - MMQ disabled for MoE (measured 69.17 t/s vs 67.26 t/s with MMQ on; re-enable once kernels are ready)
+- Dual-scale `Q4_0_ROCMFP4` (not `_FAST`): the MMQ numerical defect was fixed in v2026.9.16; older builds can set `GGML_HIP_NO_ROCMFP4_MMQ=1` to work around it.
