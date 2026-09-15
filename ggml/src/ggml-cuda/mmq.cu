@@ -274,6 +274,18 @@ bool ggml_cuda_should_use_mmq(enum ggml_type type, int cc, int64_t ne11, int64_t
     return false;
 #endif // GGML_CUDA_FORCE_CUBLAS
 
+    // ROCmFP4-specific MMQ override, REACHABLE on AMD (gfx1151 etc.). Unlike the
+    // guard below — `ggml_cuda_highest_compiled_arch(cc) < GGML_CUDA_CC_DP4A`,
+    // which only ever applies to pre-Pascal NVIDIA (any AMD cc carries the
+    // 0x1000000 offset and can never satisfy that comparison) — this sits on the
+    // AMD dispatch path that actually executes. Default (env unset) = current
+    // behavior = MMQ on.
+    if (type == GGML_TYPE_Q4_0_ROCMFP4 || type == GGML_TYPE_Q4_0_ROCMFP4_FAST) {
+        if (getenv("GGML_HIP_NO_ROCMFP4_MMQ") != nullptr) {
+            return false;
+        }
+    }
+
     bool mmq_supported;
 
     switch (type) {
@@ -329,9 +341,9 @@ bool ggml_cuda_should_use_mmq(enum ggml_type type, int cc, int64_t ne11, int64_t
     }
 
     if (ggml_cuda_highest_compiled_arch(cc) < GGML_CUDA_CC_DP4A) {
-        // NOTE: ROCmFPX MMQ kernels for gfx1151 are not yet ready; disable
-        // MMQ dispatch for MoE until the MMQ-on-current-architecture work lands
-        return false;
+        // for MoE, mmq is faster even without native dp4a
+        // TODO: check if cards older than pascal might benefit from this as well
+        return cc >= GGML_CUDA_CC_PASCAL && n_experts > 0;
     }
 
 #ifdef GGML_CUDA_FORCE_MMQ
