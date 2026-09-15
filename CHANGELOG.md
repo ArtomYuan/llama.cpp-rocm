@@ -1,12 +1,24 @@
 # 更新日志
 
+## [Unreleased] (2026-09-15)
+
+### 引擎
+
+- 测试覆盖修复：`tests/test-backend-ops.cpp` 的 `all_types[]` 纳入 `GGML_TYPE_Q4_0_ROCMFP4` / `GGML_TYPE_Q4_0_ROCMFP4_FAST`，修正假绿（此前全仓 `tests/` 内 ROCmFP4 用例数为 0）。两臂实测：默认臂 2233/2236（3 败全为双尺度 `q4_0_rocmfp4` 非 FAST，系已知数值缺陷）；`GGML_HIP_NO_ROCMFP4_MMQ=1` 臂 2236/2236 全过。
+- `mmq.cu`：清理错位守卫——把 `highest_compiled_arch(cc) < GGML_CUDA_CC_DP4A` 分支恢复为上游 pre-Pascal NVIDIA 写法（旧 `return false` + ROCmFPX 误导注释对 AMD 恒不可达，本库曾误以为「禁用 MMQ」）；新增可达的 `GGML_HIP_NO_ROCMFP4_MMQ` 兜底开关（默认开、行为不变；设置后仅 ROCmFP4 双类型转 hipBLAS，标准格式 MMQ 与 MMVQ 不受影响）。
+- **已知问题**：双尺度 `Q4_0_ROCMFP4`（非 `_FAST`）在 MMQ 路径下数值超标（NMSE 0.01–0.04，超 `max_nmse_err=5e-4` 阈值约 21–80 倍）；非本版引入；生产用 `_FAST`（单尺度）不受影响；影响面 = 未来若使用双尺度 `Q4_0_ROCMFP4` 量化的模型（当前生产模型均为 `_FAST`）。
+
+### 文档
+
+- 勘误 README/CHANGELOG 中「MMQ 未就绪/已禁用」及「off 69.17 vs on 67.26 更优」错误表述（旧 69.17/67.26 是 tg32/batch-1 decode 口径，走 MMVQ 不经过 MMQ）；实证 MMQ 一直开启且 prefill 约 2×（pp512 +105%、pp2048 +109%，2026-09-15 实测）。
+
 ## [Unreleased] (2026-09-14)
 
 ### 引擎
 
 - 上游同步：ggml-org/llama.cpp master → 97e4ca735（窗口 e107984bc..97e4ca735 = **172 commits**，merge commit cfeb42ff6，pre/post 留证 tag sync-20260914-pre/post）。
 - 修复既有缺陷：`ggml_validate_row_data` 未接入 ROCmFP4/ROCmFPx/TurboQuant 校验分发，llama-quantize 产 FPX 格式时报 "invalid type 101" 导致量化生成失败（commit da935e773；补 100-107 八个 case，TurboQuant 用 FP16 L2-norm 校验）。
-- 融合面四项全部保留：①ROCmFPX 量化（GGML 类型 100-107）②mtmd-grounders 多模态视觉（LocateAnything + DeepSeek4V 双 projector）③MoE 场景 MMQ 禁用（`ggml_cuda_should_use_mmq` 内 `return false`）④上游 CI workflows 删除态（本窗口新增的 `.github/workflows/fusion.yml` 一并删除）。
+- 融合面四项全部保留：①ROCmFPX 量化（GGML 类型 100-107）②mtmd-grounders 多模态视觉（LocateAnything + DeepSeek4V 双 projector）③MoE 场景 MMQ「禁用」（`ggml_cuda_should_use_mmq` 内 `return false`；⚠ 历史误记、已勘误——该守卫对 AMD 恒不可达、MMQ 实为一直开启，见 2026-09-15 条目）④上游 CI workflows 删除态（本窗口新增的 `.github/workflows/fusion.yml` 一并删除）。
 - 冲突裁决：机械冲突 24 个（`.github/workflows/*.yml` modify/delete，裁决 `git rm` 保持本地删除态，另有上游本窗口新增的 `.github/workflows/fusion.yml` 一并删除）+ 真内容冲突 4 个（README.md 裁决为整体取本地中文重写版；`ggml/src/ggml-cuda/CMakeLists.txt`、`ggml/src/ggml-hip/CMakeLists.txt`、`ggml/src/ggml-cuda/fattn.cu` 手工逐块融合。注：`ggml/src/CMakeLists.txt` 为自动合并，非内容冲突）。
 - 与预判相反：`mmq.cu` / `mmq.cuh` / `mmq-config-*.cuh` / `ggml/include/ggml.h` / `include/llama.h` / `tools/mtmd/clip.cpp` / `src/models/gemma4.cpp` 全部**零冲突自动合并**，融合面未被动过（八组审查 grep 全 PASS：GGML_TYPE_COUNT=108、mmq-config-rdna3 ROCMFP=24、mmq.cu MoE `return false`、arg.cpp kv_cache FPX、llama-quant.cpp ROCMFP=84、clip.cpp 双 projector、workflows 无残留、无冲突标记）。
 - 上游关键演进面：构建系统 PCH + unity build 上马（#28091）后续按上游修正；GGML_FA_QUANTS 拆分（#28079）——FlashAttention 向量 kernel 实例列表 helper 化（`ggml_cuda_fattn_vec_instances`）+ 分发改为 `ggml_cuda_get_fattn_vec_case` 查找，本库 FPX/turbo 实例与 `GGML_CUDA_FA_*_ROCMFP*` 编译定义已重新接入；RDNA3/4 MMQ 的 MoE N-tile 尺寸优化加→撤→重做，并新增 `mmq-config-gcn.cuh`；HIP/CUDA 面 BF16 fallback、gfx1201 FA 调整、mmf/mmid 并发修复、gfx90c HIP 支持；mtmd 面 gemma4 vision 修复、video ID 传播、`mtmd_tokenize_from_parts`；server 面子进程重构、LRU 挂起修复、schema 内部表示与 UI 渲染性能；模型面 Maple 20B-A1B ternary MoE、腾讯 Hy4 preview、Kimi-K3 回滚、Nemotron-3-Puzzle、Spark2_5、Qwen3-Next/Qwen3.5 recurrent_layers。
@@ -41,7 +53,7 @@
 
 ### 变更
 
-- MoE 场景禁用 MMQ（gfx1151 的 MMQ kernel 未就绪，实测 mmq off 69.17 vs on 67.26 t/s）。
+- MoE 场景禁用 MMQ（gfx1151 的 MMQ kernel 未就绪，实测 mmq off 69.17 vs on 67.26 t/s）。（⚠ 历史误记、已勘误：该「禁用」为不可达死代码、MMQ 一直开启；旧 69.17/67.26 是 tg32 decode 口径，走 MMVQ 不经过 MMQ，见 2026-09-15 条目）
 
 ### 移除
 

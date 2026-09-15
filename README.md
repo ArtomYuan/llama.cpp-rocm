@@ -25,7 +25,7 @@ llama.cpp 的独立维护分支，把三个能力整合到一个引擎：
 - **ROCmFPX 量化支持**：上游 llama.cpp 无法加载 ROCmFP4/FP8 格式——本引擎原生支持（GGML 类型100-107），并带量化工具 `llama-quantize`
 - **多模态视觉**：合并 mtmd 视觉栈，支持视觉模型与 Grounding 定位模型（`--special` 模式输出 `<ref>/<box>`）
 - **纯 ROCm HIP 后端**：构建仅含 HIP（无 Vulkan），设备锁定 ROCm0——无后端选择歧义
-- **MMQ 决策**：gfx1151 的 MMQ kernel 尚未就绪，MoE 场景禁用 MMQ（实测 69.17 t/s vs 默认 67.26 t/s）
+- **MMQ 决策**：MMQ 默认开启（含 MoE）；prefill 实测约 2×（pp512 +105%、pp2048 +109%，2026-09-15 实测）。历史「未就绪/禁用」表述系基于错误口径（旧 69.17 vs 67.26 是 tg32/batch-1 口径，走 MMVQ 不经过 MMQ），已勘误。
 - **无上游 CI**：官方 CI 矩阵已移除（本库本地构建验证）
 
 ## 功能
@@ -39,8 +39,8 @@ llama.cpp 的独立维护分支，把三个能力整合到一个引擎：
 
 | 项 | 结果 |
 |---|---|
-| Ornith 35B.A3B（Q4_ROCmFPX_FAST） | tg32 **69.17 t/s**（mmq off） |
-| 同模型 mmq on 对比 | 67.26 t/s（MMQ 未就绪——禁用为最优） |
+| Ornith 35B.A3B（Q4_ROCmFPX_FAST） | tg32 **69.17 t/s**（decode，走 MMVQ 不经 MMQ） |
+| 同模型 prefill（pp512） | **1172.66 t/s**（MMQ 开，vs 关 +105%） |
 | Qwen 27B（Q4_ROCmFPX_FAST） | tg32 12.17 t/s |
 | 纯 ROCm0 后端 vs 旧 Vulkan 路径 | 提升为引擎+后端综合效应（详见 CHANGELOG） |
 
@@ -116,4 +116,4 @@ ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --po
 
 ## 已知限制
 
-- gfx1151 上 ROCmFPX 的 MMQ kernel 尚未适配——MoE 场景禁用 MMQ（实测 mmq off 69.17 vs on 67.26 t/s，kernel 适配完成后可重启用）
+- 双尺度 `Q4_0_ROCMFP4`（非 `_FAST`）在 MMQ 路径下存在已知数值缺陷（NMSE 0.01–0.04，超 `max_nmse_err=5e-4` 阈值）；生产用 `_FAST`（单尺度）不受影响，详见 CHANGELOG。
