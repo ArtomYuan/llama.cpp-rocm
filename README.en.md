@@ -4,6 +4,8 @@ A fusion engine for AMD Strix Halo (Ryzen AI MAX+ 395 / Radeon 8060S / gfx1151):
 
 [中文](README.md)
 
+---
+
 ## What is this
 
 An independently maintained branch of llama.cpp that merges three capabilities into one engine:
