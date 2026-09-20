@@ -2,7 +2,18 @@
 
 [English](CHANGELOG.en.md)
 
-## [Unreleased] (2026-09-15)
+## [v2026.9.20] (2026-09-20)
+
+### 引擎
+
+- 上游同步：ggml-org/llama.cpp master → f072b10371（窗口 97e4ca735..f072b10371 = **98 commits**，merge commit c305d4a9a）。
+- qwen4exp 系列：新增 hc ops（#28901，含 metal #29000 / vulkan #28988 同步支持）；rms_norm + mul 融合（#28896）。
+- HIP 6 笔：RDNA3.5 MoE ncols_opt tile 启发式放宽（#28935）、ROCm AllReduce（#27825）、CUDA/HIP im2col 访问模式优化（#28013）、fattn-mma fp32 累积（#28576）、ubuntu rocm 发布包新增 gfx1103（#28423）、hip-quality-check 忽略已知 spill（#28909）。
+- RPC 3 笔：跳过 ACCEL 设备（#29020）、buffer 释放时失效缓存计算图（#24292）、权重 hash-cache（#28789）。
+- GGUF data 段对齐基准变化（#28993，影响写出的 GGUF 布局）。
+- 版本号同步前进：llama.cpp → 0.4.1（#28900）、ggml → 0.24.0；本库构建 0.4.1-dev（build 11094，commit c305d4a9a）。
+- 融合面保留：①ROCmFPX 量化 ②ROCmFP4（含 MMQ 双尺度修复与 env 开关）③mtmd 多模态视觉（LocateAnything + DeepSeek4V 双 projector）④上游 CI workflows 删除态 ⑤CONTRIBUTING/README 中文改写。枚举复核 GGML_TYPE_COUNT=108、FTYPE 100-119 全家 17 个逐一在、冲突标记零残留。
+- 冲突裁决：mechanical=20（.github/workflows/*.yml modify/delete，保持本地删除态）+ content=1（CONTRIBUTING.md 取本地中文改写）。
 
 ### 文档
 
