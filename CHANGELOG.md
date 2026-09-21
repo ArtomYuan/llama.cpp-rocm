@@ -2,7 +2,7 @@
 
 [English](CHANGELOG.en.md)
 
-## [Unreleased]
+## [v2026.9.22] (2026-09-22)
 
 ### 引擎
 
@@ -57,7 +57,7 @@
 
 - 勘误 README/CHANGELOG 中「MMQ 未就绪/已禁用」及「off 69.17 vs on 67.26 更优」错误表述（旧 69.17/67.26 是 tg32/batch-1 decode 口径，走 MMVQ 不经过 MMQ）；实证 MMQ 一直开启且 prefill 约 2×（pp512 +105%、pp2048 +109%，2026-09-15 实测）。
 
-## [Unreleased] (2026-09-14)
+## [v2026.9.22] (2026-09-22) (2026-09-14)
 
 ### 引擎
 
@@ -76,7 +76,7 @@
 - 逐块融合最复杂面 = `ggml/src/ggml-cuda/fattn.cu`：上游 #28079 把 FA 向量 kernel 分发由内联级联改成 `ggml_cuda_get_fattn_vec_case()` 查找函数，本库把 5 条 ROCmFPX 对角线组合注册进该函数、并把 `ggml_cuda_fattn_kv_type_supported` 扩展到 ROCmFPX/TurboQuant（否则 `is_rocmfp_family` 路由不可达）；两个 CMakeLists 在 helper 调用后追加 FPX/turbo 实例与编译定义。该面为本次唯一高语义风险点，编译正确性由构建阶段兜底。
 - README 未随本次同步改动：上游 README 在本窗口仅 1 行变更（维护者导航链接列表），本库 README 为中文重写版，冲突裁决取本地；README 复核结论见 S11a-readme-notes.md。
 
-## [Unreleased] (2026-09-03)
+## [v2026.9.22] (2026-09-22) (2026-09-03)
 
 ### 引擎
 

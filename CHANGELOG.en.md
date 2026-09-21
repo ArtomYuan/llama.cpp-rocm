@@ -2,7 +2,7 @@
 
 [简体中文](CHANGELOG.md)
 
-## [Unreleased]
+## [v2026.9.22] (2026-09-22)
 
 ### Engine
 
@@ -22,7 +22,7 @@
 
 - `tests/test-backend-ops.cpp`: `all_types[]` now includes the four fp8 types, plus large-shape fp8 cases (m=4096/251, n=128/512, k=1024, covering the large J tile and both fallback grids). Result: **60/60 pass** (MMVQ, MMQ and hipBLAS paths). End-to-end: Qwen3-Embedding-8B-Q8_ROCMFPX GPU smoke (including the MMQ batch path) within e-4 of the CPU baseline; fidelity matches the CPU reference (top-5 neighbour overlap 96.4%).
 
-## [Unreleased] (2026-09-15)
+## [v2026.9.22] (2026-09-22) (2026-09-15)
 
 ### Docs
 
@@ -46,7 +46,7 @@
 
 - Corrected the "MMQ not ready / disabled" and "off 69.17 vs on 67.26 is better" wording in README/CHANGELOG (the old 69.17/67.26 is a tg32/batch-1 decode metric that goes through MMVQ, not MMQ); verified MMQ has always been on and prefill is ~2x (pp512 +105%, pp2048 +109%, measured 2026-09-15).
 
-## [Unreleased] (2026-09-14)
+## [v2026.9.22] (2026-09-22) (2026-09-14)
 
 ### Engine
 
@@ -65,7 +65,7 @@
 - The most complex block-merge surface = `ggml/src/ggml-cuda/fattn.cu`: upstream #28079 changed FA vector kernel dispatch from an inline cascade to the `ggml_cuda_get_fattn_vec_case()` lookup function; this repo registered 5 ROCmFPX diagonal combinations into that function and extended `ggml_cuda_fattn_kv_type_supported` to ROCmFPX/TurboQuant (otherwise the `is_rocmfp_family` route is unreachable); two CMakeLists append FPX/turbo instances and compile definitions after the helper call. This is the only high-semantic-risk surface in this sync; compile correctness is backstopped by the build stage.
 - README unchanged in this sync: upstream README had only a 1-line change in this window (maintainer navigation link list), this repo's README is a Chinese rewrite, conflict resolution kept local; README review conclusions in S11a-readme-notes.md.
 
-## [Unreleased] (2026-09-03)
+## [v2026.9.22] (2026-09-22) (2026-09-03)
 
 ### Engine
 
