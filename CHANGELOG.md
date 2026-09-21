@@ -2,7 +2,7 @@
 
 [English](CHANGELOG.en.md)
 
-## [Unreleased] (2026-09-21)
+## [v2026.9.21] (2026-09-21)
 
 ### 引擎
 
