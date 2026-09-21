@@ -99,29 +99,30 @@ static __device__ __forceinline__ float rocmfp4_ue4m3_to_fp32_half_finite(uint8_
     const int exp = (x >> 3) & 0xF;
     const int man = x & 0x7;
 
-    if (exp == 0) {
-        return (float) man * (1.0f / 1024.0f);
-    }
-
+    // Branch-free (see rocmfpx_ue4m3_to_fp32_finite): runs per weight block in the
+    // MMQ/MMVQ load paths; selects lower to SEL/CSEL, bit-exact vs the old version.
     const uint32_t bits = ((uint32_t) exp + 119u) << 23 | ((uint32_t) man << 20);
-    return rocmfp4_u32_as_f32(bits);
+    const float    norm = rocmfp4_u32_as_f32(bits);
+    const float    subn = (float) man * (1.0f / 1024.0f);
+
+    return (exp == 0) ? subn : norm;
 #endif
 }
 
 static __device__ __forceinline__ float rocmfpx_ue4m3_to_fp32_finite(uint8_t x) {
-    if (x > 0x7e) {
-        return 0.0f;
-    }
-
+    // Branch-free decode: this helper runs once per weight block on the MMQ/MMVQ hot
+    // path (scalar-op & branch pressure there is measurable), so avoid data-dependent
+    // branches — the selects below lower to SEL/CSEL. Bit-exact vs the old version:
+    // exp==0 => man/1024; x>0x7e => 0; otherwise the same constructed float bits.
     const int exp = (x >> 3) & 0xF;
     const int man = x & 0x7;
 
-    if (exp == 0) {
-        return (float) man * (1.0f / 1024.0f);
-    }
-
     const uint32_t bits = ((uint32_t) exp + 119u) << 23 | ((uint32_t) man << 20);
-    return rocmfp4_u32_as_f32(bits);
+    const float    norm = rocmfp4_u32_as_f32(bits);
+    const float    subn = (float) man * (1.0f / 1024.0f);
+
+    const float val = (exp == 0) ? subn : norm;
+    return (x > 0x7e) ? 0.0f : val;
 }
 
 static __device__ __forceinline__ uint8_t rocmfpx_nearest_scale_ue4m3_cuda(float target_scale) {
