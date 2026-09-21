@@ -121,4 +121,4 @@ ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --po
 
 - Dual-scale `Q4_0_ROCMFP4` (not `_FAST`): the MMQ numerical defect was fixed in v2026.9.16; older builds can set `GGML_HIP_NO_ROCMFP4_MMQ=1` to work around it.
 
-> Development docs: [kernel optimization record](docs/development/kernel-optimization.md) (Chinese; profiling, fixes and validation for kernel-level changes); contribution workflow in [CONTRIBUTING.md](CONTRIBUTING.md) (Chinese).
+> Development docs: [kernel optimization record](docs/development/kernel-optimization.en.md) (profiling, fixes and validation for kernel-level changes); contribution workflow in [CONTRIBUTING.md](CONTRIBUTING.md) (Chinese).
