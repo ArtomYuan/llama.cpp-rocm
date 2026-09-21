@@ -39,8 +39,9 @@ An independently maintained branch of llama.cpp that merges three capabilities i
 
 | Item | Result |
 |---|---|
-| Ornith 35B.A3B (Q4_ROCmFPX_FAST) | tg32 **69.17 t/s** (decode, via MMVQ - does not go through MMQ) |
-| Same model, prefill (pp512) | **1172.66 t/s** (MMQ on; +105% vs off) |
+| Ornith 35B.A3B (Q4_ROCmFPX_FAST) | tg32 **≈67 t/s** (decode, via MMVQ - does not go through MMQ; r5 re-run 2026-09-21) |
+| Same model, prefill (pp512) | **≈1460 t/s** (MMQ on; r5 re-run 2026-09-21) |
+| Qwen3-Embedding-8B (Q8_0_ROCMFPX) | prefill pp2048 **1233 t/s** (v2026.9.22 decode optimization; 1107 before, +11.4%) |
 | Qwen 27B (Q4_ROCmFPX_FAST) | tg32 12.17 t/s |
 | Pure ROCm0 vs old Vulkan path | combined engine+backend improvement (see CHANGELOG) |
 
@@ -90,7 +91,7 @@ All ROCmFPX formats supported (llama-quantize output types):
 | Q6_0_ROCMFPX_LEAN | size/speed-biased Q6 routing | 6.50 |
 | Q6_0_ROCMFPX_AGENT_LEAN | agent Q6 routing (no Q8-heavy boosts) | 6.50 |
 
-> The fp8 family (Q2_0/Q3_0/Q6_0/Q8_0_ROCMFPX) GPU compute paths (MMVQ + MMQ) are enabled on RDNA3.5 (gfx1151); other architectures fall back to dequant + hipBLAS (functional, slower).
+> The fp8 family (Q2_0/Q3_0/Q6_0/Q8_0_ROCMFPX) GPU compute paths (MMVQ + MMQ) are enabled on RDNA3.5 (gfx1151), with a branch-free hot-path decode since v2026.9.22 (Q8 prefill now matches/beats std Q8_0); other architectures fall back to dequant + hipBLAS (functional, slower).
 
 **KV-cache types** (runtime parameters, not quantize outputs): TURBO3_0 (3.50 bpw) / TURBO4_0 (4.50 bpw)
 

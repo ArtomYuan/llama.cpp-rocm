@@ -39,8 +39,9 @@ llama.cpp 的独立维护分支，把三个能力整合到一个引擎：
 
 | 项 | 结果 |
 |---|---|
-| Ornith 35B.A3B（Q4_ROCmFPX_FAST） | tg32 **69.17 t/s**（decode，走 MMVQ 不经 MMQ） |
-| 同模型 prefill（pp512） | **1172.66 t/s**（MMQ 开，vs 关 +105%） |
+| Ornith 35B.A3B（Q4_ROCmFPX_FAST） | tg32 **≈67 t/s**（decode，走 MMVQ 不经 MMQ；2026-09-21 r5 复测） |
+| 同模型 prefill（pp512） | **≈1460 t/s**（MMQ 开；2026-09-21 r5 复测） |
+| Qwen3-Embedding-8B（Q8_0_ROCMFPX） | prefill pp2048 **1233 t/s**（v2026.9.22 解码优化；前 1107，+11.4%） |
 | Qwen 27B（Q4_ROCmFPX_FAST） | tg32 12.17 t/s |
 | 纯 ROCm0 后端 vs 旧 Vulkan 路径 | 提升为引擎+后端综合效应（详见 CHANGELOG） |
 
@@ -90,7 +91,7 @@ cmake --build build -j $(nproc) --target llama-server llama-quantize llama-bench
 | Q6_0_ROCMFPX_LEAN | 尺寸/速度偏向 Q6 路由 | 6.50 |
 | Q6_0_ROCMFPX_AGENT_LEAN | agent Q6 路由（无 Q8-heavy 提升） | 6.50 |
 
-> fp8 家族（Q2_0/Q3_0/Q6_0/Q8_0_ROCMFPX）的 GPU 计算路径（MMVQ + MMQ）已在 RDNA3.5（gfx1151）启用；其他架构自动回退 dequant + hipBLAS（可用、较慢）。
+> fp8 家族（Q2_0/Q3_0/Q6_0/Q8_0_ROCMFPX）的 GPU 计算路径（MMVQ + MMQ）已在 RDNA3.5（gfx1151）启用，热路径解码自 v2026.9.22 起完成无分支优化（Q8 档 prefill 追平/反超标准 Q8_0）；其他架构自动回退 dequant + hipBLAS（可用、较慢）。
 
 **KV-cache 类型**（运行时参数，非量化输出）：TURBO3_0（3.50 bpw）/ TURBO4_0（4.50 bpw）
 
