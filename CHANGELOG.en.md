@@ -2,6 +2,12 @@
 
 [简体中文](CHANGELOG.md)
 
+## [Unreleased]
+
+### Engine
+
+- **Branch-free hot-path decode (ROCmFPX/ROCmFP4)**: removed the data-dependent branches from the ue4m3 scale decode (executed once per weight block per thread; ternaries now lower to SEL/CSEL), bit-exact for all 256 inputs. Measured on gfx1151 (Qwen3-Embedding/Reranker-8B, pp2048): Q8_0_ROCMFPX **1107→1233 t/s (+11.4%, now above std Q8_0's 1227)**, Q6_0_ROCMFPX 920→1013 (+10.1%), Q4_0_ROCMFP4_FAST 1246→1294 (+3.9%). Root-caused with rocprofv3 counters (the old fp8 MMQ kernel showed +39% SALU, +40% branches, +86% WAIT_ANY, +18% wave cycles vs std; memory counters identical throughout); after the fix every counter matches std, and the fp4 MMQ kernel's wave cycles drop by 8.6%. Verified: test-backend-ops MUL_MAT rocmfpx 60/60, rocmfp4 24/24.
+
 ## [v2026.9.21] (2026-09-21)
 
 ### Engine

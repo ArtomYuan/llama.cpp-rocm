@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.en.md)
 
+## [Unreleased]
+
+### 引擎
+
+- **热路径解码无分支化（ROCmFPX/ROCmFP4）**：ue4m3 尺度解码（每权重块每线程执行一次）去掉数据相关分支（三元选择 → SEL/CSEL），全部 256 输入位等价。实测（gfx1151，Qwen3-Embedding/Reranker-8B pp2048）：Q8_0_ROCMFPX **1107→1233 t/s（+11.4%，反超 std Q8_0 的 1227）**、Q6_0_ROCMFPX 920→1013（+10.1%）、Q4_0_ROCMFP4_FAST 1246→1294（+3.9%）。定位依据：rocprofv3 计数器（旧 fp8 MMQ 核 SALU +39%、分支 +40%、WAIT_ANY +86%、波周期 +18%，访存计数逐项一致）；修复后与 std 逐项打平，fp4 MMQ 核周期 −8.6%。验证：test-backend-ops rocmfpx 60/60、rocmfp4 24/24。
+
 ## [v2026.9.21] (2026-09-21)
 
 ### 引擎
