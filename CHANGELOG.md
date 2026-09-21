@@ -2,6 +2,20 @@
 
 [English](CHANGELOG.en.md)
 
+## [Unreleased] (2026-09-21)
+
+### 引擎
+
+- **ROCmFPX fp8 家族（Q2/Q3/Q6/Q8_0_ROCMFPX）GPU 计算路径接通**（按提取法从 charlie12345/ROCmFPX 移植 + 本库配置化 MMQ 架构适配；此前该家族在 GPU 上无法运行，加载预热即 abort）：
+  - MMVQ（`mmvq.cu`）：补 fp8 四类型派发接线（vec_dot 表、表选择、内核特化、RDNA3.5 参数表），并移植 fp2 专用多列内核 `vec_dot_rocmfpx_fp2_q8_1_ncols`（多列时权重的 fp2→int8 展开只做一次）；参数宏默认值=旧行为（调优留路，暂不启用）。
+  - MMQ（`mmq-load-tiles.cuh` / `mmq.cuh` / `mmq-config-rdna3-5.cuh`）：新增 fp2/fp3/fp6/fp8 四个装载器（fp2/3/6 用 Q3_K SRAM 布局、fp8 用 Q8_0 布局）、ds 布局与 tile 尺寸表、util_funcs 双通道（dp4a/mma）接线、RDNA3.5 配置表 48 条 (I,J) 条目（与 Q8_0/Q3_K 同网格）；实例化文件（`mmq-instance-*.cu`）为既有、本次接入调度。
+  - 门控：fp8 家族 MMQ 当前仅 RDNA3.5 启用（其他架构自动回退 dequant+hipBLAS，避免命中「无 J 配置」缺省路径）；`GGML_HIP_NO_ROCMFPX_MMQ=1` 可整族关闭（调试/回退用）。
+- 回归：fp4 家族路径行为不变（RDNA3.5 参数表改动默认值=旧行为；Ornith Q4_FAST 实测新旧引擎差异在噪声内）。
+
+### 测试
+
+- `tests/test-backend-ops.cpp`：`all_types[]` 纳入 fp8 四类型，并新增 fp8 大形状用例（m=4096/251、n=128/512、k=1024，覆盖大 J tile 与 fallback 两种网格）。实测 **60/60 全过**（覆盖 MMVQ、MMQ、hipBLAS 三条路径）；端到端 Qwen3-Embedding-8B-Q8_ROCMFPX GPU 冒烟（含 MMQ 批路径）与 CPU 基准偏差 e-4 量级、保真度与 CPU 对照一致（近邻 top-5 96.4%）。
+
 ## [v2026.9.20] (2026-09-20)
 
 ### 引擎

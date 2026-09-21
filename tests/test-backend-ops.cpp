@@ -8909,6 +8909,11 @@ static const ggml_type all_types[] = {
     // Note: dual-scale Q4_0_ROCMFP4 (non-FAST) has a known numerical defect on the
     // MMQ path (NMSE ~0.01-0.04, exceeds max_nmse_err=5e-4); see CHANGELOG. Production uses _FAST.
     GGML_TYPE_Q4_0_ROCMFP4, GGML_TYPE_Q4_0_ROCMFP4_FAST,
+    // ROCmFPX (fp8 family): MMVQ + MMQ compute paths (ported from charlie12345/ROCmFPX,
+    // RDNA3.5). In the MUL_MAT suite so both the small-batch (MMVQ) and large-batch
+    // (MMQ) paths get compared against the CPU reference.
+    GGML_TYPE_Q3_0_ROCMFPX, GGML_TYPE_Q2_0_ROCMFPX,
+    GGML_TYPE_Q6_0_ROCMFPX, GGML_TYPE_Q8_0_ROCMFPX,
 };
 
 static const ggml_type base_types[] = {
@@ -9893,6 +9898,14 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
     // sides of that boundary, including an odd row count above it for the row-pair tail.
     for (int64_t m : {6271, 6272, 6273}) {
         test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_K, GGML_TYPE_F32, m, 2, 1024, { 1, 1 }, { 1, 1 }));
+    }
+
+    // ROCmFPX (fp8 family) large-batch MMQ coverage: exercise the big J tiles
+    // (up to 128) and both the fallback=false (rows % 128 == 0) and fallback=true grids.
+    for (ggml_type type_a : { GGML_TYPE_Q3_0_ROCMFPX, GGML_TYPE_Q2_0_ROCMFPX, GGML_TYPE_Q6_0_ROCMFPX, GGML_TYPE_Q8_0_ROCMFPX }) {
+        test_cases.emplace_back(new test_mul_mat(type_a, GGML_TYPE_F32, 4096, 128, 1024, { 1, 1 }, { 1, 1 }));
+        test_cases.emplace_back(new test_mul_mat(type_a, GGML_TYPE_F32, 4096, 512, 1024, { 1, 1 }, { 1, 1 }));
+        test_cases.emplace_back(new test_mul_mat(type_a, GGML_TYPE_F32,  251, 512, 1024, { 1, 1 }, { 1, 1 }));
     }
 
     test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_0, GGML_TYPE_F32, 2880, 32, 2880, {1, 1}, {1, 1}));

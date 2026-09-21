@@ -2,6 +2,20 @@
 
 [简体中文](CHANGELOG.md)
 
+## [Unreleased] (2026-09-21)
+
+### Engine
+
+- **ROCmFPX fp8 family (Q2/Q3/Q6/Q8_0_ROCMFPX): GPU compute paths wired up** (ported from charlie12345/ROCmFPX via the extraction method and adapted to this repo's config-based MMQ architecture; previously this family could not run on GPU — abort during load warmup):
+  - MMVQ (`mmvq.cu`): dispatch wiring for the four fp8 types (vec-dot table, table selection, kernel specializations, RDNA3.5 parameter table); ported the fp2-specific multi-column kernel `vec_dot_rocmfpx_fp2_q8_1_ncols` (fp2→int8 expansion done once per row for multi-column). Macro defaults keep the old behavior (no-op knobs, tuning not yet enabled).
+  - MMQ (`mmq-load-tiles.cuh` / `mmq.cuh` / `mmq-config-rdna3-5.cuh`): four new loaders (fp2/fp3/fp6 use the Q3_K SRAM layout, fp8 uses the Q8_0 layout), ds-layout and tile-size entries, util_funcs wiring in both the dp4a and mma sections, and 48 (I,J) config entries for RDNA3.5 (same grid as Q8_0/Q3_K). The template-instance files (`mmq-instance-*.cu`) already existed and are now reachable.
+  - Gating: fp8-family MMQ is currently enabled on RDNA3.5 only (other architectures fall back to dequant + hipBLAS instead of hitting the "no J config" default path); `GGML_HIP_NO_ROCMFPX_MMQ=1` disables the family anywhere (debug/rollback).
+- Regression: fp4-family behavior unchanged (the RDNA3.5 table change defaults to old behavior; Ornith Q4_FAST new-vs-old engine differences within noise).
+
+### Tests
+
+- `tests/test-backend-ops.cpp`: `all_types[]` now includes the four fp8 types, plus large-shape fp8 cases (m=4096/251, n=128/512, k=1024, covering the large J tile and both fallback grids). Result: **60/60 pass** (MMVQ, MMQ and hipBLAS paths). End-to-end: Qwen3-Embedding-8B-Q8_ROCMFPX GPU smoke (including the MMQ batch path) within e-4 of the CPU baseline; fidelity matches the CPU reference (top-5 neighbour overlap 96.4%).
+
 ## [Unreleased] (2026-09-15)
 
 ### Docs

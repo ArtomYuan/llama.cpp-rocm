@@ -76,6 +76,18 @@ static void ggml_cuda_mul_mat_q_switch_type(ggml_backend_cuda_context & ctx, con
         case GGML_TYPE_Q4_0_ROCMFP4_FAST:
             mul_mat_q_case<GGML_TYPE_Q4_0_ROCMFP4_FAST>(ctx, args, stream);
             break;
+        case GGML_TYPE_Q3_0_ROCMFPX:
+            mul_mat_q_case<GGML_TYPE_Q3_0_ROCMFPX>(ctx, args, stream);
+            break;
+        case GGML_TYPE_Q2_0_ROCMFPX:
+            mul_mat_q_case<GGML_TYPE_Q2_0_ROCMFPX>(ctx, args, stream);
+            break;
+        case GGML_TYPE_Q6_0_ROCMFPX:
+            mul_mat_q_case<GGML_TYPE_Q6_0_ROCMFPX>(ctx, args, stream);
+            break;
+        case GGML_TYPE_Q8_0_ROCMFPX:
+            mul_mat_q_case<GGML_TYPE_Q8_0_ROCMFPX>(ctx, args, stream);
+            break;
         case GGML_TYPE_MXFP4:
             mul_mat_q_case<GGML_TYPE_MXFP4>(ctx, args, stream);
             break;
@@ -286,6 +298,21 @@ bool ggml_cuda_should_use_mmq(enum ggml_type type, int cc, int64_t ne11, int64_t
         }
     }
 
+    // ROCmFPX (fp8 family): the MMQ loaders, util wiring and per-arch config tables
+    // are currently wired for RDNA3.5 only (ported from charlie12345/ROCmFPX with the
+    // extraction method; validated on gfx1151). On other devices return false so the
+    // op falls back to dequant + hipBLAS instead of aborting in the "no J config"
+    // default path of mul_mat_q_switch_J. GGML_HIP_NO_ROCMFPX_MMQ=1 disables it anywhere.
+    if (type == GGML_TYPE_Q3_0_ROCMFPX || type == GGML_TYPE_Q2_0_ROCMFPX ||
+        type == GGML_TYPE_Q6_0_ROCMFPX || type == GGML_TYPE_Q8_0_ROCMFPX) {
+        if (!GGML_CUDA_CC_IS_RDNA3_5(cc)) {
+            return false;
+        }
+        if (getenv("GGML_HIP_NO_ROCMFPX_MMQ") != nullptr) {
+            return false;
+        }
+    }
+
     bool mmq_supported;
 
     switch (type) {
@@ -314,6 +341,10 @@ bool ggml_cuda_should_use_mmq(enum ggml_type type, int cc, int64_t ne11, int64_t
 // -------------------------------------------------
         case GGML_TYPE_Q4_0_ROCMFP4:
         case GGML_TYPE_Q4_0_ROCMFP4_FAST:
+        case GGML_TYPE_Q3_0_ROCMFPX:
+        case GGML_TYPE_Q2_0_ROCMFPX:
+        case GGML_TYPE_Q6_0_ROCMFPX:
+        case GGML_TYPE_Q8_0_ROCMFPX:
         case GGML_TYPE_MXFP4:
         case GGML_TYPE_NVFP4:
             mmq_supported = true;
