@@ -16,13 +16,13 @@ llama.cpp 的独立维护分支，把三个能力整合到一个引擎：
 | charlie12345/ROCmFPX | ROCmFPX 量化格式（ROCmFP2/3/4/6/8 + TurboQuant） |
 | yuuko-eth mtmd-grounders | 多模态视觉塔（含 LocateAnything 定位投影器） |
 
-- 当前同步上游点：ggml-org/llama.cpp `97e4ca735`（2026-09-14，窗口 `e107984bc..97e4ca735` = 172 commits，merge commit `cfeb42ff6`）。
+- 当前同步上游点：ggml-org/llama.cpp `f072b10371`（2026-09-20，窗口 `97e4ca735..f072b10371` = 98 commits，merge commit `c305d4a9a`）。
 
 **一个二进制**：ROCmFPX 量化模型（文本）+ 视觉/定位模型都能跑，无需切换引擎。
 
 ## 与上游的不同
 
-- **ROCmFPX 量化支持**：上游 llama.cpp 无法加载 ROCmFP4/FP8 格式——本引擎原生支持（GGML 类型100-107），并带量化工具 `llama-quantize`
+- **ROCmFPX 量化支持**：上游 llama.cpp 无法加载 ROCmFP4/FP8 格式——本引擎原生支持（GGML 类型100-107），并带量化工具 `llama-quantize`；fp8 家族（Q2/Q3/Q6/Q8_0_ROCMFPX）含 GPU 计算路径（MMVQ + MMQ，RDNA3.5）
 - **多模态视觉**：合并 mtmd 视觉栈，支持视觉模型与 Grounding 定位模型（`--special` 模式输出 `<ref>/<box>`）
 - **纯 ROCm HIP 后端**：构建仅含 HIP（无 Vulkan），设备锁定 ROCm0——无后端选择歧义
 - **MMQ 决策**：MMQ 默认开启（含 MoE）；prefill 实测约 2×（pp512 +105%、pp2048 +109%，2026-09-15 实测）。历史「未就绪/禁用」表述系基于错误口径（旧 69.17 vs 67.26 是 tg32/batch-1 口径，走 MMVQ 不经过 MMQ），已勘误。
@@ -89,6 +89,8 @@ cmake --build build -j $(nproc) --target llama-server llama-quantize llama-bench
 | Q8_0_ROCMFPX_AGENT | agent/工具调用连贯性 Q8 路由 | 8.25 |
 | Q6_0_ROCMFPX_LEAN | 尺寸/速度偏向 Q6 路由 | 6.50 |
 | Q6_0_ROCMFPX_AGENT_LEAN | agent Q6 路由（无 Q8-heavy 提升） | 6.50 |
+
+> fp8 家族（Q2_0/Q3_0/Q6_0/Q8_0_ROCMFPX）的 GPU 计算路径（MMVQ + MMQ）已在 RDNA3.5（gfx1151）启用；其他架构自动回退 dequant + hipBLAS（可用、较慢）。
 
 **KV-cache 类型**（运行时参数，非量化输出）：TURBO3_0（3.50 bpw）/ TURBO4_0（4.50 bpw）
 

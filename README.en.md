@@ -16,13 +16,13 @@ An independently maintained branch of llama.cpp that merges three capabilities i
 | charlie12345/ROCmFPX | ROCmFPX quantization formats (ROCmFP2/3/4/6/8 + TurboQuant) |
 | yuuko-eth mtmd-grounders | Multimodal vision tower (incl. LocateAnything grounding projector) |
 
-- Current upstream sync point: ggml-org/llama.cpp `97e4ca735` (2026-09-14; window `e107984bc..97e4ca735` = 172 commits, merge commit `cfeb42ff6`).
+- Current upstream sync point: ggml-org/llama.cpp `f072b10371` (2026-09-20; window `97e4ca735..f072b10371` = 98 commits, merge commit `c305d4a9a`).
 
 **One binary**: runs both ROCmFPX-quantized models (text) and vision/grounding models, no engine switching.
 
 ## Differences from upstream
 
-- **ROCmFPX quantization**: upstream llama.cpp cannot load ROCmFP4/FP8 formats - this engine supports them natively (GGML types 100-107) and ships `llama-quantize` for conversion
+- **ROCmFPX quantization**: upstream llama.cpp cannot load ROCmFP4/FP8 formats - this engine supports them natively (GGML types 100-107) and ships `llama-quantize` for conversion; the fp8 family (Q2/Q3/Q6/Q8_0_ROCMFPX) includes GPU compute paths (MMVQ + MMQ, RDNA3.5)
 - **Multimodal vision**: merged mtmd vision stack, supports vision models and grounding models (`--special` mode emits `<ref>/<box>`)
 - **Pure ROCm HIP backend**: HIP-only build (no Vulkan), device locked to ROCm0 - no backend ambiguity
 - **MMQ decision**: MMQ is on by default (including MoE); measured prefill speedup ~2x (pp512 +105%, pp2048 +109%, 2026-09-15). The earlier "not ready / disabled" wording came from a wrong metric (69.17 vs 67.26 was tg32/batch-1, which goes through MMVQ, not MMQ) and has been corrected.
@@ -89,6 +89,8 @@ All ROCmFPX formats supported (llama-quantize output types):
 | Q8_0_ROCMFPX_AGENT | agent/tool-call coherent Q8 routing | 8.25 |
 | Q6_0_ROCMFPX_LEAN | size/speed-biased Q6 routing | 6.50 |
 | Q6_0_ROCMFPX_AGENT_LEAN | agent Q6 routing (no Q8-heavy boosts) | 6.50 |
+
+> The fp8 family (Q2_0/Q3_0/Q6_0/Q8_0_ROCMFPX) GPU compute paths (MMVQ + MMQ) are enabled on RDNA3.5 (gfx1151); other architectures fall back to dequant + hipBLAS (functional, slower).
 
 **KV-cache types** (runtime parameters, not quantize outputs): TURBO3_0 (3.50 bpw) / TURBO4_0 (4.50 bpw)
 
