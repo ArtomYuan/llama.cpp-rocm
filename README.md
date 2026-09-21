@@ -120,3 +120,5 @@ ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --po
 ## 已知限制
 
 - 双尺度 `Q4_0_ROCMFP4`（非 `_FAST`）：MMQ 数值缺陷已在 v2026.9.16 修复；旧版本可设 `GGML_HIP_NO_ROCMFP4_MMQ=1` 规避。
+
+> 开发文档：[内核优化记录](docs/development/kernel-optimization.md)（本库内核级改动的定位、修复与验证）；贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。

@@ -90,6 +90,8 @@ PR 提交前请自查：
    # 发一条基本请求，确认能正常生成
    ```
 
+4. **内核路径改动**：另行完成 `test-backend-ops`（MUL_MAT 按类型过滤）与计数器级复核——完整验证链与复现命令见 [docs/development/kernel-optimization.md](docs/development/kernel-optimization.md)（内核优化记录）。
+
 ## 沟通
 
 - 提 issue 请使用对应模板（Bug 报告 / 功能请求）
