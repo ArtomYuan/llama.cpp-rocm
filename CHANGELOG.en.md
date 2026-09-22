@@ -2,6 +2,16 @@
 
 [简体中文](CHANGELOG.md)
 
+## [Unreleased] (2026-09-22)
+
+### Fixed
+
+- **Fix int32 signed overflow in the MMQ destination offset `offset_dst` (large vocab × large batch)**: the lm_head (tied `token_embd.weight[4096,151669]`, `stride_col_dst = vocab = 151669`, `J = 128`) overflows once `n ≥ 14209` (i.e. `ntx = ceil(n/128) ≥ 112`, `jt ≥ 111`): `jt*J*stride_col_dst = 111*128*151669 = 2,154,913,152 > 2^31-1` wraps negative → writes back to `dst − ~8.6 GiB` → unmapped-page Memory Fault (`kernel: mul_mat_q<(ggml_type)103,128,true>`). All four homologous sites in `ggml/src/ggml-cuda/mmq.cuh` (`:1094` regular dense, `:1182` stream-k loop, `:1271` stream-k tail, `:1414` stream-k fixup) now declare `int64_t` and cast the multiplication explicitly `(int64_t) jt*J*stride_col_dst` (changing only the declaration is insufficient — the RHS still computes in int). Pre-fix the threshold is exact to 1: at `m=151669, k=4096`, `n ≤ 14208` is safe and `n = 14209` always faults; post-fix the full minimal-repro matrix (n up to 32768) no longer faults and the MMQ result matches the valve-off hipBLAS path element-wise (max abs diff 3.557e2, NMSE 5.46e-5). `official/master` (`9a9f939b9`) has the same int32 overflow at `mmq.cuh:1005/1093/1182/1325`; the fork only exposed it after `8cbe3f39a` wired MMQ for ROCmFPX.
+
+### Tests
+
+- `tests/test-backend-ops.cpp`: added an MMQ `offset_dst` int32-overflow regression case (`Q8_0_ROCMFPX`, `m=151669, n=16384, k=32`, covering the `m*n > 2^31` large-vocab × large-batch shape; n=16384 overflows 17 column tiles for an NMSE of 0.165, far above the 5e-4 threshold, so the numerical check catches it; the minimal n=14209 overflows only one column — below the threshold — and is therefore not used). Pre-fix the case always fails (`ERR = 0.1649 > 5e-4`); post-fix it passes. `rocmfpx` targeted self-test 60/60 → **61/61**, full `MUL_MAT` 1381 → **1382/1382**, `MUL_MAT_ID` 935/935.
+
 ## [v2026.9.22] (2026-09-22)
 
 ### Engine

@@ -9908,6 +9908,15 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
         test_cases.emplace_back(new test_mul_mat(type_a, GGML_TYPE_F32,  251, 512, 1024, { 1, 1 }, { 1, 1 }));
     }
 
+    // Regression: MMQ host-side int32 `offset_dst` overflow when the destination has more than
+    // 2^31 elements (m*n > 2^31 => dst >= 8.6 GiB). For Q8_0_ROCMFPX with J=128 and a vocab-sized
+    // row count m=151669, the column tile jt overflows jt*J*stride_col_dst once jt >= 111
+    // (111*128*151669 = 2,154,913,152 > 2^31-1). n=16384 (ntx=128, jt up to 127) corrupts 17 tiles
+    // (13% of columns), enough for the 5e-4 NMSE threshold to catch it; the minimal n=14209 corrupts
+    // only one column (below the threshold) so it cannot serve as a numerical regression. k=32 keeps
+    // the CPU reference cheap; the large n guarantees the MMQ path (not MMVQ) is taken.
+    test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q8_0_ROCMFPX, GGML_TYPE_F32, 151669, 16384, 32, { 1, 1 }, { 1, 1 }));
+
     test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_0, GGML_TYPE_F32, 2880, 32, 2880, {1, 1}, {1, 1}));
     test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q8_0, GGML_TYPE_F32, 2880, 32, 2880, {1, 1}, {1, 1}));
     test_cases.emplace_back(new test_mul_mat(GGML_TYPE_MXFP4, GGML_TYPE_F32, 2880, 32, 2880, {1, 1}, {1, 1}));

@@ -2,6 +2,16 @@
 
 [English](CHANGELOG.en.md)
 
+## [Unreleased] (2026-09-22)
+
+### 修复
+
+- **修复 MMQ 目标偏移 `offset_dst` 的 int32 有符号溢出（大词表 × 大批量）**：lm_head（tied `token_embd.weight[4096,151669]`，`stride_col_dst = vocab = 151669`、`J = 128`）在 `n ≥ 14209`（即 `ntx = ceil(n/128) ≥ 112`、`jt ≥ 111`）时 `jt*J*stride_col_dst = 111*128*151669 = 2,154,913,152 > 2^31-1` 溢出为负 → 写回 `dst − ~8.6 GiB` 野地址 → Memory Fault（`kernel: mul_mat_q<(ggml_type)103,128,true>`）。`ggml/src/ggml-cuda/mmq.cuh` 四处同型位置（`:1094` 常规 dense、`:1182` stream-k 循环、`:1271` stream-k 尾段、`:1414` stream-k fixup）全部把声明改为 `int64_t` 并在乘法显式 cast `(int64_t) jt*J*stride_col_dst`（只改声明不够，RHS 仍按 int 计算）。修前实测阈值精确到 1：`m=151669, k=4096` 时 `n ≤ 14208` 安全、`n = 14209` 必崩；修后最小复现全矩阵（n 至 32768）不崩，且 MMQ 与关阀 hipBLAS 逐元素一致（max abs diff 3.557e2、NMSE 5.46e-5）。该缺陷在 `official/master`（`9a9f939b9`）`mmq.cuh:1005/1093/1182/1325` 为同型 int32 溢出，fork 经 `8cbe3f39a` 为 ROCmFPX 接通 MMQ 后才将其暴露。
+
+### 测试
+
+- `tests/test-backend-ops.cpp`：新增 MMQ `offset_dst` int32 溢出回归用例（`Q8_0_ROCMFPX`，`m=151669, n=16384, k=32`，覆盖 `m*n > 2^31` 的大词表 × 大批量形状；n=16384 使 17 个列 tile 溢出、NMSE 0.165 远高于 5e-4 阈值，可被数值判据捕获；最小形状 n=14209 仅 1 列溢出、低于阈值，故不用最小形状）。修前该用例 `ERR = 0.1649 > 5e-4` 必失败、修后通过；`rocmfpx` 定向自测 60/60 → **61/61**，全套 `MUL_MAT` 1381 → **1382/1382**，`MUL_MAT_ID` 935/935。
+
 ## [v2026.9.22] (2026-09-22)
 
 ### 引擎
