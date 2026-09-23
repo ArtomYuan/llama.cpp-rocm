@@ -1062,6 +1062,15 @@ struct llm_graph_context {
               ggml_tensor * ids,
               ggml_tensor * w_s = nullptr) const;
 
+    // whether the full-vocab output logits (lm_head / result_output) must be built.
+    // in embeddings mode (cparams.embeddings) the logits are never consumed by the public API:
+    // callers read per-token (t_embd) or pooled (t_embd_pooled) embeddings instead (see
+    // llama_context::decode() extract path and server send_rerank()). skipping the lm_head
+    // removes the largest GEMM in the graph plus its full-vocab materialization / D2H.
+    bool should_build_logits() const {
+        return !cparams.embeddings;
+    }
+
     ggml_tensor * build_norm(
              ggml_tensor * cur,
              ggml_tensor * mw,

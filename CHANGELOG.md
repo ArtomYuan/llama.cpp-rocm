@@ -4,6 +4,10 @@
 
 ## [Unreleased] (2026-09-22)
 
+### 引擎
+
+- **embeddings 模式跳过未消费的全词表 lm_head 输出（`result_output`）**：重排/embeddings 路径（`cparams.embeddings=true`）下 `qwen3.cpp` 原先无条件构建 `[151669, n_tokens]` 的 lm_head 输出（16K 批 ≈ 9.9 GB F32），而消费方只取 `n_cls_out` 个池化值（`llama-context.cpp` 的 RANK/MEAN/CLS/LAST 提取只读 `t_embd_pooled`/`t_embd`）。新增 `llm_graph_context::should_build_logits()`（判据 `!cparams.embeddings`，非 rnk 专用），`qwen3.cpp` 据此在 embeddings 模式跳过 lm_head 构建与 `ggml_build_forward_expand`；`llama-context.cpp` 的 `output_reserve` 同步改 `has_logits = !cparams.embeddings`，不再分配 `n_vocab*n_outputs` 主机缓冲与全词表 D2H。生成模式（`embeddings=false`）gate 不生效、行为不变。验证：重排分数 6 尺寸（含 14209/26534 边界）逐 bit 一致、向量逐元素 max|Δ|=0、生成冒烟逐 token 一致、`test-backend-ops MUL_MAT rocmfpx` 61/61。实测 16K 单任务 24.687s→24.667s（+0.1%）——消除的是真实但小的浪费（lm_head 约占整网前向计算 3.9%），不改变「GPU 前向吞吐 vs 突发到达率」的结构性退化。
+
 ### 修复
 
 - **修复 MMQ 目标偏移 `offset_dst` 的 int32 有符号溢出（大词表 × 大批量）**：lm_head（tied `token_embd.weight[4096,151669]`，`stride_col_dst = vocab = 151669`、`J = 128`）在 `n ≥ 14209`（即 `ntx = ceil(n/128) ≥ 112`、`jt ≥ 111`）时 `jt*J*stride_col_dst = 111*128*151669 = 2,154,913,152 > 2^31-1` 溢出为负 → 写回 `dst − ~8.6 GiB` 野地址 → Memory Fault（`kernel: mul_mat_q<(ggml_type)103,128,true>`）。`ggml/src/ggml-cuda/mmq.cuh` 四处同型位置（`:1094` 常规 dense、`:1182` stream-k 循环、`:1271` stream-k 尾段、`:1414` stream-k fixup）全部把声明改为 `int64_t` 并在乘法显式 cast `(int64_t) jt*J*stride_col_dst`（只改声明不够，RHS 仍按 int 计算）。修前实测阈值精确到 1：`m=151669, k=4096` 时 `n ≤ 14208` 安全、`n = 14209` 必崩；修后最小复现全矩阵（n 至 32768）不崩，且 MMQ 与关阀 hipBLAS 逐元素一致（max abs diff 3.557e2、NMSE 5.46e-5）。该缺陷在 `official/master`（`9a9f939b9`）`mmq.cuh:1005/1093/1182/1325` 为同型 int32 溢出，fork 经 `8cbe3f39a` 为 ROCmFPX 接通 MMQ 后才将其暴露。

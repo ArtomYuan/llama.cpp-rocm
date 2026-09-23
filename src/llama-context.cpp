@@ -2063,7 +2063,9 @@ uint32_t llama_context::output_reserve(int32_t n_outputs) {
     const auto n_embd     = hparams.n_embd;
     const auto n_embd_out = hparams.n_embd_out();
 
-    bool has_logits     = true;
+    // embeddings mode never consumes the full-vocab logits (callers read t_embd / t_embd_pooled),
+    // so skip the n_vocab*n_outputs host buffer and its D2H copy entirely.
+    bool has_logits     = !cparams.embeddings;
     bool has_embd       = cparams.embeddings;
     bool has_embd_nextn = cparams.embeddings_nextn;
 
