@@ -162,7 +162,7 @@ int main(int argc, char ** argv) {
     }
 
     // for non-causal models, batch size must be equal to ubatch size
-    if (params.attention_type != LLAMA_ATTENTION_TYPE_CAUSAL) {
+    if (params.attention_type == LLAMA_ATTENTION_TYPE_NON_CAUSAL) {
         params.n_ubatch = params.n_batch;
     }
 
