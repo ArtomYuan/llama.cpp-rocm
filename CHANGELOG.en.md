@@ -2,19 +2,29 @@
 
 [简体中文](CHANGELOG.md)
 
-## [Unreleased] (2026-09-22)
+## [Unreleased]
+
+## [v2026.9.24] (2026-09-24)
 
 ### Engine
 
 - **Skip the unconsumed full-vocab lm_head output (`result_output`) in embeddings mode**: in rerank/embeddings paths (`cparams.embeddings=true`), `qwen3.cpp` used to unconditionally build a `[151669, n_tokens]` lm_head output (~9.9 GB F32 for a 16K batch), while consumers only read `n_cls_out` pooled values (`llama-context.cpp`'s RANK/MEAN/CLS/LAST extraction reads only `t_embd_pooled`/`t_embd`). Added `llm_graph_context::should_build_logits()` (predicate `!cparams.embeddings`, not reranker-specific); `qwen3.cpp` now skips the lm_head build and `ggml_build_forward_expand` in embeddings mode; `llama-context.cpp`'s `output_reserve` also sets `has_logits = !cparams.embeddings`, so the `n_vocab*n_outputs` host buffer and full-vocab D2H are no longer allocated. Generation mode (`embeddings=false`) is unaffected (gate inactive). Verified: rerank scores bit-identical across 6 sizes (incl. 14209/26534 boundaries), embedding vectors element-wise max|Δ|=0, generation smoke token-identical, `test-backend-ops MUL_MAT rocmfpx` 61/61. Measured 16K single task 24.687s→24.667s (+0.1%) — this removes a real but small waste (lm_head ≈3.9% of the forward pass) and does not change the structural degradation of "GPU forward throughput vs burst arrival rate".
 
+- **`llama-embedding` example: jina-reranker-v3.5 support chain** (for listwise rerank serving):
+  - `qwen3`: per-layer **sliding-window attention (SWA)** support, routed from the GGUF `sliding_window` and the per-layer pattern (jina-reranker-v3.5 uses 16 SWA layers + 12 full-attention layers).
+  - `--output-token-ids`: emit hidden states only for the specified token ids (e.g. `<|embed_token|>` / `<|rerank_token|>`), so rerank scoring extraction no longer consumes the whole-sequence output.
+  - `--serve-stdin`: **persistent mode** -- the model loads once and serves per-request input over stdin (the basis for the serving wrapper).
+
 ### Fixed
 
 - **Fix int32 signed overflow in the MMQ destination offset `offset_dst` (large vocab × large batch)**: the lm_head (tied `token_embd.weight[4096,151669]`, `stride_col_dst = vocab = 151669`, `J = 128`) overflows once `n ≥ 14209` (i.e. `ntx = ceil(n/128) ≥ 112`, `jt ≥ 111`): `jt*J*stride_col_dst = 111*128*151669 = 2,154,913,152 > 2^31-1` wraps negative → writes back to `dst − ~8.6 GiB` → unmapped-page Memory Fault (`kernel: mul_mat_q<(ggml_type)103,128,true>`). All four homologous sites in `ggml/src/ggml-cuda/mmq.cuh` (`:1094` regular dense, `:1182` stream-k loop, `:1271` stream-k tail, `:1414` stream-k fixup) now declare `int64_t` and cast the multiplication explicitly `(int64_t) jt*J*stride_col_dst` (changing only the declaration is insufficient — the RHS still computes in int). Pre-fix the threshold is exact to 1: at `m=151669, k=4096`, `n ≤ 14208` is safe and `n = 14209` always faults; post-fix the full minimal-repro matrix (n up to 32768) no longer faults and the MMQ result matches the valve-off hipBLAS path element-wise (max abs diff 3.557e2, NMSE 5.46e-5). `official/master` (`9a9f939b9`) has the same int32 overflow at `mmq.cuh:1005/1093/1182/1325`; the fork only exposed it after `8cbe3f39a` wired MMQ for ROCmFPX.
 
+- **`llama-embedding`: an unspecified attention type was misread as non-causal, silently overriding `--ubatch-size` to the whole packet**: `UNSPECIFIED` fell into the `!= LLAMA_ATTENTION_TYPE_CAUSAL` predicate, so `n_ubatch = n_batch` (and `n_batch` had already been raised to `n_ctx`); a long input then entered the graph as a **single ubatch**: O(n^2) attention masks (base + SWA, one copy on host and one on device) plus full-sequence activations. Measured with an 110K-token single packet at a 131K context: about **93 GB** (whole-machine OOM). With the predicate changed to `== LLAMA_ATTENTION_TYPE_NON_CAUSAL` (`UNSPECIFIED` now defers to the model default, consistent with `llama-context.cpp`), the same case peaks at about **15.6 GB**, a 44K packet drops from 108 s to 17 s, and there are zero 500s/OOM; semantics are unchanged (this GGUF has no `causal` key; the model is causal by default).
+
 ### Tests
 
 - `tests/test-backend-ops.cpp`: added an MMQ `offset_dst` int32-overflow regression case (`Q8_0_ROCMFPX`, `m=151669, n=16384, k=32`, covering the `m*n > 2^31` large-vocab × large-batch shape; n=16384 overflows 17 column tiles for an NMSE of 0.165, far above the 5e-4 threshold, so the numerical check catches it; the minimal n=14209 overflows only one column — below the threshold — and is therefore not used). Pre-fix the case always fails (`ERR = 0.1649 > 5e-4`); post-fix it passes. `rocmfpx` targeted self-test 60/60 → **61/61**, full `MUL_MAT` 1381 → **1382/1382**, `MUL_MAT_ID` 935/935.
+- Long-input memory regression: the sandbox ladder (8K-120K tokens) holds a constant **15.6 GB** GTT delta after the fix (length-independent) with zero breaker trips; a production 110K-token packet succeeds (90.9 s / 200); the observation window after the switch shows zero 500/504 and no oom lines in `journalctl -k`.
 
 ## [v2026.9.22] (2026-09-22)
 
