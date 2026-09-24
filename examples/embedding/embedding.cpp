@@ -6,8 +6,11 @@
 #include <clocale>
 #include <ctime>
 #include <algorithm>
+#include <iostream>
 #include <sstream>
 #include <unordered_set>
+
+#include <nlohmann/json.hpp>
 
 #if defined(_MSC_VER)
 #pragma warning(disable: 4244 4267) // possible loss of data
@@ -107,6 +110,7 @@ int main(int argc, char ** argv) {
     // When set, only tokens whose ID is in the set are marked as output; the result is a compact
     // embedding array containing only those token positions (in encounter order).
     std::unordered_set<int32_t> output_token_ids;
+    bool serve_stdin = false;
     {
         std::vector<char*> argv2;
         argv2.push_back(argv[0]);
@@ -119,6 +123,8 @@ int main(int argc, char ** argv) {
                         output_token_ids.insert(std::stoi(tok));
                     }
                 }
+            } else if (std::string(argv[i]) == "--serve-stdin") {
+                serve_stdin = true;
             } else {
                 argv2.push_back(argv[i]);
             }
@@ -294,6 +300,62 @@ int main(int argc, char ** argv) {
     const int n_embd_out = llama_model_n_embd_out(model);
     std::vector<float> embeddings(n_embd_count * n_embd_out, 0);
     float * emb = embeddings.data();
+
+    // serve mode: JSON-line protocol over stdin/stdout, model stays loaded
+    if (serve_stdin) {
+        LOG_INF("%s: serving prompts from stdin (JSON line: {\"prompt\": ...})\n", __func__);
+        llama_batch batch = llama_batch_init(n_batch, 0, 1);
+        std::string line;
+        while (std::getline(std::cin, line)) {
+            if (line.empty()) {
+                continue;
+            }
+            nlohmann::json req;
+            try {
+                req = nlohmann::json::parse(line);
+            } catch (const std::exception & e) {
+                LOG_ERR("%s: bad request line: %s\n", __func__, e.what());
+                LOG("{\"error\":\"bad request\"}\n");
+                continue;
+            }
+            const std::string prompt = req.value("prompt", "");
+            std::vector<llama_token> inp = common_tokenize(ctx, prompt, true, true);
+            if (inp.size() > n_batch) {
+                LOG_ERR("%s: prompt too long (%lld > %lld)\n", __func__, (long long int) inp.size(), (long long int) n_batch);
+                LOG("{\"error\":\"prompt too long\"}\n");
+                continue;
+            }
+            int n_out = 0;
+            for (const auto t : inp) {
+                if (output_token_ids.count(t)) {
+                    n_out++;
+                }
+            }
+            batch_add_seq(batch, inp, 0, output_token_ids);
+            std::vector<float> out(n_out * n_embd_out);
+            batch_decode(ctx, batch, out.data(), 1, n_embd_out, params.embd_normalize);
+            common_batch_clear(batch);
+
+            LOG("{\"embeddings\":[");
+            for (int j = 0; j < n_out; j++) {
+                LOG("[");
+                for (int i = 0; i < n_embd_out; i++) {
+                    LOG("%1.7f", out[j * n_embd_out + i]);
+                    if (i + 1 < n_embd_out) {
+                        LOG(",");
+                    }
+                }
+                LOG("]");
+                if (j + 1 < n_out) {
+                    LOG(",");
+                }
+            }
+            LOG("]}\n");
+        }
+        llama_batch_free(batch);
+        llama_backend_free();
+        return 0;
+    }
 
     // break into batches
     int e = 0; // number of embeddings already stored
