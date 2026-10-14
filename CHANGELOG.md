@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+### 引擎
+
+- **同步上游 master `091b6a7fc`**（2026-10-14；窗口 `f072b10371..091b6a7fc` = 552 commits / 1176 files；merge commit `b5a7b6118`）：
+  - 代码面 7 处真冲突逐段适配：`qwen3.cpp` 保留本地 SWA（模板化 `graph<iswa>`，并适配上游 `build_backbone`/`no_build` 重构）；`llama-embedding` 的 `--output-token-ids` / `--serve-stdin` 移植到上游 `common_batch` API（compact 输出索引语义不变）；mtmd 的 `LOCATEANYTHING` 与上游 `COHERE2V`/`D1OMNI_V`/`D1OMNI_A` 并存；`ggml-cuda/convert.cu` 取上游 iq4_nl 新装载器（本地内联反量化其余段保留）；README 保持本库改写。
+  - MMQ 面适配上游 `ggml_prec prec_src1` 重构（`969492f3d`）：ROCmFP 家族 6 个 tile loader 的 18 处 helper 调用、6 个 `mul_mat_q_case`、12 个 util-funcs 条目补 `GGML_PREC_Q8`。HIP 路径下 prec 不参与配置选择（RDNA3.5 表由 type/J/fallback 决定）、fork 的 vec dot 仍消费 q8_1 src1——签名适配，非行为变更。
+  - **退役本地「embeddings 模式跳过 lm_head」补丁**（`9b701d8af`）：上游 `#30445`（`cb55ffe6e`）以通用 `build_logits()` 机制等价覆盖同一目标（池化 embeddings 跳过 lm_head，并配 `#30255` 的 logits 缓冲零分配），且与上游 `set_embeddings()` 的重预留逻辑配套；本地更宽判据（含 `pooling=NONE`）与其切换语义冲突，故整块退役（`should_build_logits()` 移除，`llama-context.cpp` 取上游 `has_logits = !cparams.embeddings || graph_has_logits`）。
+  - CI：48 个既有 workflow 保持删除态（`git rm`）；上游窗口新增 9 个（`ci-self-hosted-{cpu,cuda,kleidiai,metal,openvino,vulkan,webgpu}.yml`、`models-check.yml`、`release-publish.yml`）合并后一并移除。
+  - 枚举/接线复核：`GGML_TYPE_COUNT=108`、FTYPE 100-119、ROCmFP4/ROCmFPX 四层接线（`mmvq.cu` 派发 / `should_use_mmq` supported / `mmq.cuh` ds 布局与双尺度 16 值 vec dot / `mmq-load-tiles.cuh` + `mmq-config-rdna3-5.cuh`）、`tests/test-backend-ops.cpp` 的 `all_types` 覆盖全在位。
+
+### 测试
+
+- 同步后 HIP/gfx1151 全量构建（llama-server / llama-quantize / llama-bench / test-backend-ops / llama-embedding，build 11666）绿。`test-backend-ops`：`MUL_MAT -p rocmfp4` **24/24**、`-p rocmfpx` **61/61**（含 `m=151669,n=16384,k=32` 的 2^31 溢出回归用例）、默认 `MUL_MAT` 全套 **2534/2534**（ROCm0 + CPU 双后端）。
+- 冒烟：`llama-bench` Qwen3-Embedding-0.6B BF16 pp32 **652.73 t/s** / tg8 **120.55 t/s**；embeddings 服务（18010）与 jina-reranker-v3.5（SWA + RANK，18011）`/health` 200 + 真实往返；生成（Qwen3.8-27B Q4_0_ROCMFP4_FAST，18012）200 + 一轮 chat completion；私有类型量化往返（BF16 → Q4_0_ROCMFP4_FAST，302 MB）后可加载，pp32 **1581 t/s** / tg8 **257 t/s**。GPU/CPU 数值对照（Qwen3-Embedding mean，raw 未归一化输出）：max|Δ| 81（分量量级 ~2e4，bf16 累积序差异级）。
+
 ## [v2026.9.24] (2026-09-24)
 
 ### 引擎

@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+### Engine
+
+- **Sync to upstream master `091b6a7fc`** (2026-10-14; window `f072b10371..091b6a7fc` = 552 commits / 1176 files; merge commit `b5a7b6118`):
+  - All 7 real code conflicts resolved hunk by hunk: `qwen3.cpp` keeps the local SWA support (templated `graph<iswa>`, adapted to the upstream `build_backbone`/`no_build` refactor); `llama-embedding`'s `--output-token-ids` / `--serve-stdin` ported to the upstream `common_batch` API (the compact output index semantics are unchanged); mtmd keeps `LOCATEANYTHING` alongside the upstream `COHERE2V`/`D1OMNI_V`/`D1OMNI_A`; `ggml-cuda/convert.cu` takes the upstream iq4_nl loader (the rest of the local inlined dequantization is kept); the README keeps this fork's rewrite.
+  - MMQ adapted to the upstream `ggml_prec prec_src1` refactor (`969492f3d`): 18 loader helper calls in the 6 ROCmFP tile loaders, 6 `mul_mat_q_case` calls and 12 util-funcs entries now pass `GGML_PREC_Q8`. On HIP the precision does not take part in config selection (the RDNA3.5 table is chosen by type/J/fallback) and the fork's vec dots still consume a q8_1 src1 -- a signature adaptation, not a behaviour change.
+  - **Retired the local "skip the lm_head in embeddings mode" patch** (`9b701d8af`): upstream `#30445` (`cb55ffe6e`) covers the same goal with the generic `build_logits()` mechanism (pooled embeddings skip the lm_head, together with the zero-allocation logits buffer from `#30255`) and is wired to the upstream `set_embeddings()` re-reserve logic; the wider local predicate (including `pooling=NONE`) conflicts with that toggle semantics, so the whole patch is retired (`should_build_logits()` removed, `llama-context.cpp` takes the upstream `has_logits = !cparams.embeddings || graph_has_logits`).
+  - CI: the 48 existing workflows stay deleted (`git rm`); the 9 new upstream workflows (`ci-self-hosted-{cpu,cuda,kleidiai,metal,openvino,vulkan,webgpu}.yml`, `models-check.yml`, `release-publish.yml`) are removed after the merge.
+  - Enum/wiring re-check: `GGML_TYPE_COUNT=108`, FTYPE 100-119, the four ROCmFP4/ROCmFPX wiring layers (`mmvq.cu` dispatch / `should_use_mmq` supported table / `mmq.cuh` ds layouts and the dual-scale per-16 vec dot / `mmq-load-tiles.cuh` + `mmq-config-rdna3-5.cuh`) and the `tests/test-backend-ops.cpp` `all_types` coverage are all in place.
+
+### Tests
+
+- The post-sync HIP/gfx1151 build (llama-server / llama-quantize / llama-bench / test-backend-ops / llama-embedding, build 11666) is green. `test-backend-ops`: `MUL_MAT -p rocmfp4` **24/24**, `-p rocmfpx` **61/61** (including the `m=151669,n=16384,k=32` 2^31-overflow regression case) and the default `MUL_MAT` suite **2534/2534** (ROCm0 + CPU).
+- Smoke: `llama-bench` on Qwen3-Embedding-0.6B BF16 pp32 **652.73 t/s** / tg8 **120.55 t/s**; embeddings server (18010) and jina-reranker-v3.5 (SWA + RANK, 18011) return `/health` 200 plus a real round-trip; generation (Qwen3.8-27B Q4_0_ROCMFP4_FAST, 18012) returns 200 for one chat completion; a private-type quantization round-trip (BF16 -> Q4_0_ROCMFP4_FAST, 302 MB) loads and runs at pp32 **1581 t/s** / tg8 **257 t/s**. GPU vs CPU numeric comparison (Qwen3-Embedding mean, raw un-normalized output): max|delta| 81 (components around 2e4, bf16 accumulation-order level).
+
 ## [v2026.9.24] (2026-09-24)
 
 ### Engine

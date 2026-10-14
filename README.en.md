@@ -16,7 +16,7 @@ An independently maintained branch of llama.cpp that merges three capabilities i
 | charlie12345/ROCmFPX | ROCmFPX quantization formats (ROCmFP2/3/4/6/8 + TurboQuant) |
 | yuuko-eth mtmd-grounders | Multimodal vision tower (incl. LocateAnything grounding projector) |
 
-- Current upstream sync point: ggml-org/llama.cpp `f072b10371` (2026-09-20; window `97e4ca735..f072b10371` = 98 commits, merge commit `c305d4a9a`).
+- Current upstream sync point: ggml-org/llama.cpp `091b6a7fc` (2026-10-14; window `f072b10371..091b6a7fc` = 552 commits, merge commit `b5a7b6118`).
 
 **One binary**: runs both ROCmFPX-quantized models (text) and vision/grounding models, no engine switching.
 
