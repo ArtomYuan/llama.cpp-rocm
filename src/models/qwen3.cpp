@@ -71,6 +71,17 @@ std::unique_ptr<llm_graph_context> llama_model_qwen3::build_arch_graph(const llm
 
 template <bool iswa>
 llama_model_qwen3::graph<iswa>::graph(const llama_model & model, const llm_graph_params & params) : llm_graph_context(params) {
+    ggml_tensor * cur = build_backbone(model);
+
+    // lm_head
+    cur = build_lora_mm(model.output, cur, model.output_s);
+
+    cb(cur, "result_output", -1);
+    res->t_logits = cur;
+}
+
+template <bool iswa>
+ggml_tensor * llama_model_qwen3::graph<iswa>::build_backbone(const llama_model & model) {
     const int64_t n_embd_head = hparams.n_embd_head_v();
 
     GGML_ASSERT(n_embd_head == hparams.n_embd_head_k());
@@ -175,18 +186,7 @@ llama_model_qwen3::graph<iswa>::graph(const llama_model & model, const llm_graph
     cb(cur, "result_norm", -1);
     res->t_embd = cur;
 
-    if (should_build_logits()) {
-        // lm_head
-        cur = build_lora_mm(model.output, cur, model.output_s);
-
-        cb(cur, "result_output", -1);
-        res->t_logits = cur;
-
-        ggml_build_forward_expand(gf, cur);
-    }
-    // else: embeddings mode — skip the full-vocab lm_head entirely. the pooling / score head is
-    //       built from res->t_embd by build_pooling(), which also expands the graph (so the hidden
-    //       states are still computed); res->t_logits stays nullptr and every consumer guards it.
+    return cur;
 }
 
 template struct llama_model_qwen3::graph<false>;
