@@ -679,37 +679,37 @@ static constexpr __device__ ggml_cuda_mmq_util_funcs ggml_cuda_mmq_get_util_func
                     VDR_MXFP4_Q8_1_MMQ,
                     ggml_cuda_mmq_load_tiles_rocmfp4<type, J, fallback>,
                     ggml_cuda_mmq_vec_dot_q8_0_q8_1_dp4a<type, J, fallback>,
-                    ggml_cuda_mmq_write_back_dp4a<type, J, fallback>);
+                    ggml_cuda_mmq_write_back_dp4a<type, J, fallback, prec_src1>);
             case GGML_TYPE_Q4_0_ROCMFP4_FAST:
                 return ggml_cuda_mmq_util_funcs(
                     VDR_MXFP4_Q8_1_MMQ,
                     ggml_cuda_mmq_load_tiles_rocmfp4_fast<type, J, fallback>,
                     ggml_cuda_mmq_vec_dot_q8_0_q8_1_dp4a<type, J, fallback>,
-                    ggml_cuda_mmq_write_back_dp4a<type, J, fallback>);
+                    ggml_cuda_mmq_write_back_dp4a<type, J, fallback, prec_src1>);
             case GGML_TYPE_Q3_0_ROCMFPX:
                 return ggml_cuda_mmq_util_funcs(
                     VDR_ROCMFP3_Q8_1_MMQ,
                     ggml_cuda_mmq_load_tiles_rocmfpx_fp3<type, J, fallback>,
                     ggml_cuda_mmq_vec_dot_q8_0_16_q8_1_dp4a<type, J, fallback>,
-                    ggml_cuda_mmq_write_back_dp4a<type, J, fallback>);
+                    ggml_cuda_mmq_write_back_dp4a<type, J, fallback, prec_src1>);
             case GGML_TYPE_Q2_0_ROCMFPX:
                 return ggml_cuda_mmq_util_funcs(
                     VDR_ROCMFP2_Q8_1_MMQ,
                     ggml_cuda_mmq_load_tiles_rocmfpx_fp2<type, J, fallback>,
                     ggml_cuda_mmq_vec_dot_q8_0_16_q8_1_dp4a<type, J, fallback>,
-                    ggml_cuda_mmq_write_back_dp4a<type, J, fallback>);
+                    ggml_cuda_mmq_write_back_dp4a<type, J, fallback, prec_src1>);
             case GGML_TYPE_Q6_0_ROCMFPX:
                 return ggml_cuda_mmq_util_funcs(
                     VDR_ROCMFP6_Q8_1_MMQ,
                     ggml_cuda_mmq_load_tiles_rocmfpx_fp6<type, J, fallback>,
                     ggml_cuda_mmq_vec_dot_q8_0_16_q8_1_dp4a<type, J, fallback>,
-                    ggml_cuda_mmq_write_back_dp4a<type, J, fallback>);
+                    ggml_cuda_mmq_write_back_dp4a<type, J, fallback, prec_src1>);
             case GGML_TYPE_Q8_0_ROCMFPX:
                 return ggml_cuda_mmq_util_funcs(
                     VDR_ROCMFP8_Q8_1_MMQ,
                     ggml_cuda_mmq_load_tiles_rocmfpx_fp8<type, J, fallback>,
                     ggml_cuda_mmq_vec_dot_q8_0_q8_1_dp4a<type, J, fallback>,
-                    ggml_cuda_mmq_write_back_dp4a<type, J, fallback>);
+                    ggml_cuda_mmq_write_back_dp4a<type, J, fallback, prec_src1>);
             case GGML_TYPE_MXFP4:
                 return ggml_cuda_mmq_util_funcs(
                     VDR_MXFP4_Q8_1_MMQ,
@@ -887,38 +887,38 @@ static constexpr __device__ ggml_cuda_mmq_util_funcs ggml_cuda_mmq_get_util_func
             return ggml_cuda_mmq_util_funcs(
                 -1,
                 ggml_cuda_mmq_load_tiles_rocmfp4<type, J, fallback>,
-                ggml_cuda_mmq_vec_dot_q8_0_16_q8_1_mma<type, J, fallback>,
-                ggml_cuda_mmq_write_back_mma<type, J, fallback>);
+                ggml_cuda_mmq_vec_dot_q8_0_16_q8_1_mma<type, J, fallback, prec_src1>,
+                ggml_cuda_mmq_write_back_mma<type, J, fallback, prec_src1>);
         case GGML_TYPE_Q4_0_ROCMFP4_FAST:
             return ggml_cuda_mmq_util_funcs(
                 -1,
                 ggml_cuda_mmq_load_tiles_rocmfp4_fast<type, J, fallback>,
                 ggml_cuda_mmq_vec_dot_q8_0_q8_1_mma<type, J, fallback, MMQ_Q8_1_DS_LAYOUT_D4>,
-                ggml_cuda_mmq_write_back_mma<type, J, fallback>);
+                ggml_cuda_mmq_write_back_mma<type, J, fallback, prec_src1>);
         case GGML_TYPE_Q3_0_ROCMFPX:
             return ggml_cuda_mmq_util_funcs(
                 -1,
                 ggml_cuda_mmq_load_tiles_rocmfpx_fp3<type, J, fallback>,
-                ggml_cuda_mmq_vec_dot_q8_0_16_q8_1_mma<type, J, fallback>,
-                ggml_cuda_mmq_write_back_mma<type, J, fallback>);
+                ggml_cuda_mmq_vec_dot_q8_0_16_q8_1_mma<type, J, fallback, prec_src1>,
+                ggml_cuda_mmq_write_back_mma<type, J, fallback, prec_src1>);
         case GGML_TYPE_Q2_0_ROCMFPX:
             return ggml_cuda_mmq_util_funcs(
                 -1,
                 ggml_cuda_mmq_load_tiles_rocmfpx_fp2<type, J, fallback>,
-                ggml_cuda_mmq_vec_dot_q8_0_16_q8_1_mma<type, J, fallback>,
-                ggml_cuda_mmq_write_back_mma<type, J, fallback>);
+                ggml_cuda_mmq_vec_dot_q8_0_16_q8_1_mma<type, J, fallback, prec_src1>,
+                ggml_cuda_mmq_write_back_mma<type, J, fallback, prec_src1>);
         case GGML_TYPE_Q6_0_ROCMFPX:
             return ggml_cuda_mmq_util_funcs(
                 -1,
                 ggml_cuda_mmq_load_tiles_rocmfpx_fp6<type, J, fallback>,
-                ggml_cuda_mmq_vec_dot_q8_0_16_q8_1_mma<type, J, fallback>,
-                ggml_cuda_mmq_write_back_mma<type, J, fallback>);
+                ggml_cuda_mmq_vec_dot_q8_0_16_q8_1_mma<type, J, fallback, prec_src1>,
+                ggml_cuda_mmq_write_back_mma<type, J, fallback, prec_src1>);
         case GGML_TYPE_Q8_0_ROCMFPX:
             return ggml_cuda_mmq_util_funcs(
                 -1,
                 ggml_cuda_mmq_load_tiles_rocmfpx_fp8<type, J, fallback>,
                 ggml_cuda_mmq_vec_dot_q8_0_q8_1_mma<type, J, fallback, MMQ_Q8_1_DS_LAYOUT_D4>,
-                ggml_cuda_mmq_write_back_mma<type, J, fallback>);
+                ggml_cuda_mmq_write_back_mma<type, J, fallback, prec_src1>);
         case GGML_TYPE_MXFP4:
             return ggml_cuda_mmq_util_funcs(
                 -1,
