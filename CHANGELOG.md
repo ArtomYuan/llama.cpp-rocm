@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### 更名
+
+- **项目更名：`llama.cpp-rocm` → `strix.cpp`**（GitHub 仓库 `ArtomYuan/strix.cpp`；旧链接由 GitHub 301 自动重定向）。
+
 ### 引擎
 
 - **同步上游 master `091b6a7fc`**（2026-10-14；窗口 `f072b10371..091b6a7fc` = 552 commits / 1176 files；merge commit `b5a7b6118`）：

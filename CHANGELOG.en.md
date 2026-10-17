@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Rename
+
+- **Project renamed: `llama.cpp-rocm` → `strix.cpp`** (GitHub: `ArtomYuan/strix.cpp`; old links redirect via GitHub 301).
+
 ### Engine
 
 - **Sync to upstream master `091b6a7fc`** (2026-10-14; window `f072b10371..091b6a7fc` = 552 commits / 1176 files; merge commit `b5a7b6118`):

@@ -1,4 +1,6 @@
-# llama.cpp-rocm
+# strix.cpp
+
+> 原名 `llama.cpp-rocm`（2026-10-17 更名）。旧链接由 GitHub 自动重定向。
 
 面向 AMD Strix Halo（Ryzen AI MAX+ 395 / Radeon 8060S / gfx1151）的融合引擎：官方 llama.cpp master + **ROCmFPX 量化格式** + **多模态视觉塔**三合一。
 

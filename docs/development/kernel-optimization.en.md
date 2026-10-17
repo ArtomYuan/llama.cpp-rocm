@@ -2,7 +2,7 @@
 
 [简体中文](kernel-optimization.md)
 
-Records of kernel-level optimizations applied to the ROCmFPX / ROCmFP4 quantization families on HIP (gfx1151) in this repo (llama.cpp-rocm). Each entry covers the problem, profiling evidence, root cause, fix and validation data, and can be reproduced with the commands included.
+Records of kernel-level optimizations applied to the ROCmFPX / ROCmFP4 quantization families on HIP (gfx1151) in this repo (strix.cpp). Each entry covers the problem, profiling evidence, root cause, fix and validation data, and can be reproduced with the commands included.
 
 ---
 

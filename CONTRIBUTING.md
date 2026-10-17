@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢你考虑为 **llama.cpp-rocm** 做出贡献！🎉
+感谢你考虑为 **strix.cpp** 做出贡献！🎉
 
 本项目是面向 **AMD Strix Halo**（Ryzen AI MAX+ 395 / Radeon 8060S / gfx1151）的融合引擎：官方 llama.cpp master + **ROCmFPX 量化格式** + **多模态视觉塔** 三合一。
 

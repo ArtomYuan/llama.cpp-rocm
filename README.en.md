@@ -1,4 +1,6 @@
-# llama.cpp-rocm
+# strix.cpp
+
+> Formerly `llama.cpp-rocm` (renamed 2026-10-17). Old links redirect automatically.
 
 A fusion engine for AMD Strix Halo (Ryzen AI MAX+ 395 / Radeon 8060S / gfx1151): upstream llama.cpp master + **ROCmFPX quantization** + **multimodal vision tower** in a single binary.
 

@@ -2,7 +2,7 @@
 
 [English](kernel-optimization.en.md)
 
-本库（llama.cpp-rocm）对 ROCmFPX / ROCmFP4 量化家族在 HIP（gfx1151）上**内核级优化**的记录：每条含问题、定位证据、根因、修复与验证数据，均可按文内命令复现。
+本库（strix.cpp）对 ROCmFPX / ROCmFP4 量化家族在 HIP（gfx1151）上**内核级优化**的记录：每条含问题、定位证据、根因、修复与验证数据，均可按文内命令复现。
 
 ---
 
