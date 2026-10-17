@@ -281,6 +281,28 @@ static constexpr __device__ int ggml_cuda_fattn_mma_get_occupancy(const int DKQ,
     return ggml_cuda_fattn_mma_get_config(DKQ, DV, ncols).occupancy;
 }
 
+// XAIHI-SPLIT (2026-10-17): per-(ncols1,ncols2) config split for the (256,256) D=256 family on
+// RDNA. Only the gqa8 shape (ncols1=8, ncols2=8) takes the 512-thread config: spills drop ~60%
+// and deep-context throughput improves ~21% at kv=16k; every other split stays stock 256-thread
+// (the stock config performs better for the wide-nbatch splits such as ncols1=32/ncols2=2).
+static constexpr __device__ bool ggml_cuda_fattn_mma_xaihi_split_512_dev(const int DKQ, const int DV, const int ncols1, const int ncols2) {
+#if defined(AMD_WMMA_AVAILABLE)
+    return DKQ == 256 && DV == 256 && ((ncols1 == 8 && ncols2 == 8) || (ncols1 == 16 && ncols2 == 4));
+#else
+    GGML_UNUSED_VARS(DKQ, DV, ncols1, ncols2);
+    return false;
+#endif
+}
+
+static bool ggml_cuda_fattn_mma_xaihi_split_512_host(const int DKQ, const int DV, const int ncols1, const int ncols2, const int cc) {
+#if defined(GGML_USE_HIP)
+    return amd_wmma_available(cc) && DKQ == 256 && DV == 256 && ((ncols1 == 8 && ncols2 == 8) || (ncols1 == 16 && ncols2 == 4));
+#else
+    GGML_UNUSED_VARS(DKQ, DV, ncols1, ncols2, cc);
+    return false;
+#endif
+}
+
 static __host__ int ggml_cuda_fattn_mma_get_nbatch_fa(const int DKQ, const int DV, const int ncols, const int cc) {
     return ggml_cuda_fattn_mma_get_config(DKQ, DV, ncols, cc).nbatch_fa;
 }
@@ -1230,7 +1252,7 @@ static __device__ __forceinline__ void flash_attn_ext_f16_process_tile(
     constexpr int  nbatch_fa       = ggml_cuda_fattn_mma_get_nbatch_fa     (DKQ, DV, ncols);
     constexpr int  nbatch_K2       = ggml_cuda_fattn_mma_get_nbatch_K2     (DKQ, DV, ncols);
     constexpr int  nbatch_V2       = ggml_cuda_fattn_mma_get_nbatch_V2     (DKQ, DV, ncols);
-    constexpr int  nbatch_combine  = ggml_cuda_fattn_mma_get_nbatch_combine(DKQ, DV, ncols);
+    constexpr int  nbatch_combine  = ggml_cuda_fattn_mma_xaihi_split_512_dev(DKQ, DV, ncols1, ncols2) ? 32 : ggml_cuda_fattn_mma_get_nbatch_combine(DKQ, DV, ncols);
     constexpr bool Q_in_reg        = ggml_cuda_fattn_mma_get_Q_in_reg      (DKQ, DV, ncols);
     constexpr int  nstages         = ggml_cuda_fattn_mma_get_nstages       (DKQ, DV, ncols1, ncols2, use_sparse);
 
@@ -1794,7 +1816,7 @@ static constexpr __host__ __device__ bool ggml_cuda_flash_attn_ext_mma_f16_may_u
 }
 
 template<int DKQ, int DV, int ncols1, int ncols2, bool use_logit_softcap, bool V_is_K_view, bool use_sparse>
-__launch_bounds__(ggml_cuda_fattn_mma_get_nthreads(DKQ, DV, ncols1*ncols2), ggml_cuda_fattn_mma_get_occupancy(DKQ, DV, ncols1*ncols2))
+__launch_bounds__(ggml_cuda_fattn_mma_xaihi_split_512_dev(DKQ, DV, ncols1, ncols2) ? 512 : ggml_cuda_fattn_mma_get_nthreads(DKQ, DV, ncols1*ncols2), ggml_cuda_fattn_mma_xaihi_split_512_dev(DKQ, DV, ncols1, ncols2) ? 1 : ggml_cuda_fattn_mma_get_occupancy(DKQ, DV, ncols1*ncols2))
 static __global__ void flash_attn_ext_f16(
         const char * Q_ptr,
         const char * K_ptr,
@@ -1875,7 +1897,7 @@ static __global__ void flash_attn_ext_f16(
     constexpr int warp_size = ggml_cuda_get_physical_warp_size();
     constexpr int ncols     = ncols1 * ncols2;
     constexpr int nbatch_fa = ggml_cuda_fattn_mma_get_nbatch_fa(DKQ, DV, ncols);
-    constexpr int nthreads  = ggml_cuda_fattn_mma_get_nthreads(DKQ, DV, ncols);
+    constexpr int nthreads  = ggml_cuda_fattn_mma_xaihi_split_512_dev(DKQ, DV, ncols1, ncols2) ? 512 : ggml_cuda_fattn_mma_get_nthreads(DKQ, DV, ncols);
     constexpr int nwarps    = nthreads / warp_size;
 
     const int gqa_ratio = ne02 / ne12; // With grouped query attention there are > 1 Q matrices per K, V matrix.
@@ -2012,11 +2034,11 @@ void ggml_cuda_flash_attn_ext_mma_f16_case(ggml_backend_cuda_context & ctx, ggml
 
     constexpr int ncols = ncols1 * ncols2;
 
-    const int  nthreads       = ggml_cuda_fattn_mma_get_nthreads      (DKQ, DV, ncols, cc);
+    const int  nthreads       = ggml_cuda_fattn_mma_xaihi_split_512_host(DKQ, DV, ncols1, ncols2, cc) ? 512 : ggml_cuda_fattn_mma_get_nthreads      (DKQ, DV, ncols, cc);
     const int  nbatch_fa      = ggml_cuda_fattn_mma_get_nbatch_fa     (DKQ, DV, ncols, cc);
     const int  nbatch_K2      = ggml_cuda_fattn_mma_get_nbatch_K2     (DKQ, DV, ncols, cc);
     const int  nbatch_V2      = ggml_cuda_fattn_mma_get_nbatch_V2     (DKQ, DV, ncols, cc);
-    const int  nbatch_combine = ggml_cuda_fattn_mma_get_nbatch_combine(DKQ, DV, ncols, cc);
+    const int  nbatch_combine = ggml_cuda_fattn_mma_xaihi_split_512_host(DKQ, DV, ncols1, ncols2, cc) ? 32 : ggml_cuda_fattn_mma_get_nbatch_combine(DKQ, DV, ncols, cc);
     const bool Q_in_reg       = ggml_cuda_fattn_mma_get_Q_in_reg      (DKQ, DV, ncols, cc);
     const int  nstages        = ggml_cuda_fattn_mma_get_nstages       (DKQ, DV, ncols1, ncols2, cc);
 
