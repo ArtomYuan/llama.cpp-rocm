@@ -72,6 +72,7 @@ ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --po
 
 - [Quantization guide](docs/quantization-guide.en.md): family tables, how to choose, quantize commands, KV types
 - [Kernel optimization record](docs/development/kernel-optimization.en.md): evidence and reproduction for every kernel specialization
+- [Roadmap](ROADMAP.en.md): what comes next and why, and which item runs first
 - [Contributing](CONTRIBUTING.md) (Chinese)
 
 ## Known limitations

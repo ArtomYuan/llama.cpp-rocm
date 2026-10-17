@@ -72,6 +72,7 @@ ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --po
 
 - [量化指南](docs/quantization-guide.md)：家族表、怎么选、量化命令、KV 类型
 - [内核优化记录](docs/development/kernel-optimization.md)：本库每项内核特调的证据与复现
+- [路线图](ROADMAP.md)：接下来要做什么、为什么，先动哪一项
 - [贡献指南](CONTRIBUTING.md)
 
 ## 已知限制
