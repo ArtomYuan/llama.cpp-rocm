@@ -28,6 +28,7 @@ An independently maintained branch of llama.cpp that merges three capabilities i
 - **Multimodal vision**: merged mtmd vision stack, supports vision models and grounding models (`--special` mode emits `<ref>/<box>`)
 - **Pure ROCm HIP backend**: HIP-only build (no Vulkan), device locked to ROCm0 - no backend ambiguity
 - **MMQ decision**: MMQ is on by default (including MoE); measured prefill speedup ~2x (pp512 +105%, pp2048 +109%, 2026-09-15). The earlier "not ready / disabled" wording came from a wrong metric (69.17 vs 67.26 was tg32/batch-1, which goes through MMVQ, not MMQ) and has been corrected.
+- **Attention kernel tuning (gfx1151)**: the FA config is split by `(ncols1,ncols2)` - the `(8,8)` and `(16,4)` instances use a 512-thread config (-60% register spills), reaching **+20~23%** at kv=16k deep contexts; all other shapes (including the `(32,2)` family) stay on stock 256 threads.
 - **No upstream CI**: upstream CI matrix removed (validated by local builds)
 
 ## Features
@@ -45,6 +46,8 @@ An independently maintained branch of llama.cpp that merges three capabilities i
 | Same model, prefill (pp512) | **≈1460 t/s** (MMQ on; r5 re-run 2026-09-21) |
 | Qwen3-Embedding-8B (Q8_0_ROCMFPX) | prefill pp2048 **1233 t/s** (v2026.9.22 decode optimization; 1107 before, +11.4%) |
 | Qwen 27B (Q4_ROCmFPX_FAST) | tg32 12.17 t/s |
+| Attention kernel gqa8 `(8,8)`, kv=16k | **14.08 TFLOPS** (512-thread config; stock 11.48, **+22.6%**; same-moment A/B, v2026.10.17) |
+| Attention kernel `(16,4)`, kv=16k | **10.63 TFLOPS** (stock 8.84, **+20.2%**; same-moment A/B, v2026.10.17) |
 | Pure ROCm0 vs old Vulkan path | combined engine+backend improvement (see CHANGELOG) |
 
 ## Deployment

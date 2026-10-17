@@ -99,6 +99,54 @@ test-backend-ops test -o MUL_MAT -p "rocmfp4"   # 24/24
 
 ---
 
+## 2. 注意力内核：512 线程配置按 (ncols1,ncols2) 分裂（v2026.10.17）
+
+### 2.1 问题
+
+gfx1151 的 FLASH_ATTN_EXT mma-f16 主内核在 stock 配置（`(256,256,64): 256,2,64` = 256 线程/occ2/combine64）下 VGPR 拉满 256、每线程溢出 **515 处**、scratch 1076B——kv≥8k 的深上下文吞吐被寄存器溢出拖累：kv=16k gqa8 基线 **11.48 TFLOPS**。
+
+### 2.2 定位过程与证据
+
+- 逐内核采样 + 硬件计数器：等待类 82%、L2 命中 6.8% → 延迟受限；空间维度指向寄存器压力。
+- 单实例资源报告（`-Rpass-analysis=kernel-resource-usage`）：VGPR 256（上限）、溢出 515 处/线程、scratch 1076B。
+- 512 线程配置单试（occ 2→1、combine 64→32）：溢出 **−60%**、kv=16k **+21%**（11.5→13.97）。
+- 整行修改版（ncols=64 全实例共享）导致 `(32,2)` 家族 **−16~21%**——同宽度不同头分组共享同一行，必须按 `(ncols1,ncols2)` 分裂。
+
+### 2.3 根因
+
+配置表按 `ncols` 取键：`ncols=64` 一行同时服务 `(8,8)`/`(16,4)`/`(32,2)` 三种实例；512 线程收益只对头分组宽的 `(8,8)`/`(16,4)` 成立，对 `(32,2)` 相反。
+
+### 2.4 修复
+
+- `ggml/src/ggml-cuda/fattn-mma-f16.cuh`：新增分裂判定双 helper——设备侧 `ggml_cuda_fattn_mma_xaihi_split_512_dev`（宏判定）、主机侧 `ggml_cuda_fattn_mma_xaihi_split_512_host`（运行时 `amd_wmma_available(cc)`），接 5 处调用点（launch_bounds / kernel body nthreads / process_tile combine / host nthreads / host combine）；仅 `(256,256,8,8)` 与 `(256,256,16,4)` 启用。
+- **关键坑（主机/设备宏可见性）**：`RDNA3` 宏源自设备趟专属 `__GFX11__`，主机编译趟不可见——单一 `__host__ __device__` 判定会形成「主机 256 / 设备 512」错位，表现为 **NaN（首元素）+ 约 2× 假快**（半量计算）。必须拆双 helper。
+
+### 2.5 验证链
+
+- 数值门：`test-backend-ops test -o FLASH_ATTN_EXT -p "hsk=256.*type_K=f16"` = **148/152**；4 挂均为 kv≥32k 的既有精度边缘（stock 同款，非本轮引入）。
+- 定位矩阵：nb 梯度（2/4/8/16/32/64）与 n_kv_max 梯度（256/512/1024/2048）全过；初版 `(8,8)`-nb≥8 的 NaN 回归在修复后清零。
+- 性能（同刻背靠背）：`(8,8)` kv=16k **11.48→14.08 TF（+22.6%）**；`(16,4)` **8.84→10.63（+20.2%）**；P1 `(32,2)` 持平；32k/64k 深水 **+4%**；4k 短上下文 −3~6%（权衡内）。
+- 构建确定性：同源同工具链重编两次产物逐字节一致（md5 复核）。
+
+### 2.6 复现命令
+
+```bash
+# 数值门
+test-backend-ops test -o FLASH_ATTN_EXT -p "hsk=256.*type_K=f16"
+
+# 性能（同刻背靠背；perf 用例由参数化循环生成：nh=8 × ratio∈{1,4,8} × kv∈{4096..65536} × nb∈{1,4096}）
+test-backend-ops perf -o FLASH_ATTN_EXT -p "hsk=256,hsv=256,nh=8,nr23=\[8,1\],kv=16384,nb=4096"
+test-backend-ops perf -o FLASH_ATTN_EXT -p "hsk=256,hsv=256,nh=8,nr23=\[4,1\],kv=16384,nb=4096"
+test-backend-ops perf -o FLASH_ATTN_EXT -p "hsk=256,hsv=256,nh=4,nr23=\[6,1\],kv=16384,nb=512"
+```
+
+### 2.7 交付
+
+- 提交：`43ea02cb3`（配置分裂）、`c57487a5b`（FA 向量闸门）、`6d4fc573a`（用例覆盖）、`0eb0adcf4`（llama-bench 类型）
+- 版本：**v2026.10.17 (v0.2.7)**
+
+---
+
 ## 附：条目结构（后续内核级改动沿用）
 
 1. 问题（含基线数字与适用条件）
