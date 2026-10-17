@@ -147,6 +147,71 @@ test-backend-ops perf -o FLASH_ATTN_EXT -p "hsk=256,hsv=256,nh=4,nr23=\[6,1\],kv
 
 ---
 
+## 3. 预填 GEMM：ROCmFP4 的 MMQ K 分块接上 FP4 专用值（v2026.10.18）
+
+### 3.1 问题
+
+Qwen3.8-27B 的预填 GEMM（`Q4_0_ROCMFP4_FAST`）在 27B 主投影形状上只有 **27.5 TFLOPS**，仅为同形状 f16（33.3）的 82%——4.25 bpw 的权重读得比 f16 少 3.7 倍，吞吐反而更低。对照 gufo 同款模型的公开记录（预填 ≈ llama.cpp 的 2×），差距不在注意力，在 GEMM 本身。
+
+### 3.2 定位过程与证据
+
+1. **立尺**（`tests/test-backend-ops perf -o MUL_MAT`，27B 投影形状）：Q4 = 27.47 / 25.75 / 25.23 TFLOPS（三个主形状），f16 = 33.27 / 24.31 / 27.73。
+2. **分派面审查**（`ggml/src/ggml-cuda/mmq-config-rdna3-5.cuh`）：类型 101（`Q4_0_ROCMFP4_FAST`）的条目挂着 `MMQ_ITER_K=256`；而 `mmq.cuh:10` 里已有 FP4 专用的 `MMQ_ITER_K_FP4=512`，从未被 ROCmFP4 条目引用。
+3. **变体实测**（每次重编 + 同刻测量）：
+
+   | 变体 | 17408×2048×5120 | 判定 |
+   |:--|--:|:--|
+   | baseline（256） | 27.90 TF | 对照 |
+   | **iter512（K=512）** | **53.33 TF（+90.6%）** | 采用 |
+   | occ1（occupancy 2→1） | 27.34 TF | 否决（无收益） |
+   | both（512 + occ1） | 52.57 TF | 否决（无叠加） |
+
+### 3.3 根因
+
+类型 101 接入 MMQ 时，配置表照抄了通用路径的 K 分块 256，FP4 专用值漏接——**纯配置遗漏，不是算法缺陷**。
+
+### 3.4 修复
+
+`ggml/src/ggml-cuda/mmq-config-rdna3-5.cuh`：`Q4_0_ROCMFP4` / `Q4_0_ROCMFP4_FAST` 的 12 条 CASE 条目将 `MMQ_ITER_K` 改为 `MMQ_ITER_K_FP4`。
+
+### 3.5 验证链
+
+- **数值门**：`MUL_MAT -p rocmfp4` **24/24**、`-p rocmfpx` **61/61**。
+- **整网 A/B**（Qwen3.8-27B Q4_0_ROCMFP4_FAST，同机同模型同协议背靠背）：
+
+  | 场景 | 改前 | 改后 | 变化 |
+  |:--|--:|--:|--:|
+  | pp2048 | 433.5 t/s | **720.8 t/s** | **+66.3%** |
+  | pp16384 | 396.4 t/s | **613.5 t/s** | **+54.8%** |
+  | pp65536 | 295.0 t/s | **413.6 t/s** | **+40.2%** |
+  | tg256 | 14.04 t/s | 14.04 t/s | 不变（解码走 MMVQ） |
+
+- **横向对照**：gufo 同款模型的公开记录为预填 656 / 575 / 387（0 / 16k / 64k 深度），本版为 721 / 614 / 414——三档均在其上（量化档不同，口径为同芯片同模型级别）。
+
+### 3.6 边界与否决项
+
+- **fp8 族不适用**：把同一改动套到 `Q2/Q3/Q6/Q8_0_ROCMFPX` → 内核 GEMM 20.2→34.8 TF（+72~86%），但数值门 **49/61**，失败用例全部为 **k=1024**（ERR≈1.0，结果整块错），k=256/k=4096 通过。K 瓦片与 SRAM 布局绑定（K 分位超块粒度 256），改动涉及块索引/加载器，属独立改造，未纳入本版。
+- occ1 / both 无收益，不采用。
+
+### 3.7 复现命令
+
+```bash
+# 内核用例（新增 27B 投影形状）
+LD_LIBRARY_PATH=build/bin:/opt/rocm/core-10.1/lib \
+  build/bin/test-backend-ops perf -o MUL_MAT -p "m=17408,n=2048,k=5120"
+# 数值门
+LD_LIBRARY_PATH=build/bin:/opt/rocm/core-10.1/lib build/bin/test-backend-ops test -o MUL_MAT -p "rocmfp4"
+# 整网
+build/bin/llama-bench -m <27B Q4_0_ROCMFP4_FAST.gguf> -p 2048 -n 0 -r 3
+```
+
+### 3.8 交付
+
+- 代码：`mmq-config-rdna3-5.cuh`（12 条条目）+ `tests/test-backend-ops.cpp`（新增 perf 用例）。
+- 数值门、端到端 A/B 数据在 `~/bench/gemm-e2e-1017/`、`~/bench/mmq-scan2-1017.log`。
+
+---
+
 ## 附：条目结构（后续内核级改动沿用）
 
 1. 问题（含基线数字与适用条件）

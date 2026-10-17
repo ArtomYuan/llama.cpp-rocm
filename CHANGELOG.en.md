@@ -2,6 +2,25 @@
 
 [简体中文](CHANGELOG.md)
 
+## [v2026.10.18] (2026-10-18)
+
+### Performance
+
+- **Prefill GEMM: the ROCmFP4 family now uses the FP4-specific MMQ K tile (256 → 512)**: the `Q4_0_ROCMFP4` / `Q4_0_ROCMFP4_FAST` MMQ entries had been wired to the generic `MMQ_ITER_K=256` since they were first added, while the FP4-specific `MMQ_ITER_K_FP4=512` (defined in `mmq.cuh`) was never used. After the switch, kernel throughput on the 27B projection shapes goes from 27.9 to 53.2 TFLOPS (+90.6%), and all three end-to-end prefill depths improve:
+
+  | Case (Qwen3.8-27B, Q4_0_ROCMFP4_FAST) | Before | After | Change |
+  |:--|--:|--:|--:|
+  | prefill pp2048 | 433.5 t/s | 720.8 t/s | **+66.3%** |
+  | prefill pp16384 | 396.4 t/s | 613.5 t/s | **+54.8%** |
+  | prefill pp65536 | 295.0 t/s | 413.6 t/s | **+40.2%** |
+  | generation tg256 | 14.04 t/s | 14.04 t/s | unchanged (decode uses MMVQ) |
+
+  Numeric gates: `MUL_MAT -p rocmfp4` **24/24**, `-p rocmfpx` **61/61**; back-to-back A/B, same machine, model and protocol. The same change was **not** applied to the fp8 family (ROCmFPX): at K=512 its k=1024 cases fail numerically (ERR≈1.0) — the K tile is bound to the SRAM layout (256-element super-block), so that is a separate change. See `docs/development/kernel-optimization.en.md` section 3.
+
+### Tests
+
+- `test-backend-ops`: added MUL_MAT perf cases for the Qwen3.8-27B projection shapes (`17408×2048×5120`, `5120×2048×17408`, `6144×2048×5120`, `17408×512×5120`, `17408×1×5120`), each for `Q4_0_ROCMFP4_FAST` and F16.
+
 ## [v2026.10.17] (2026-10-17)
 
 ### Rename

@@ -147,6 +147,71 @@ test-backend-ops perf -o FLASH_ATTN_EXT -p "hsk=256,hsv=256,nh=4,nr23=\[6,1\],kv
 
 ---
 
+## 3. Prefill GEMM: the ROCmFP4 MMQ K tile now uses the FP4-specific value (v2026.10.18)
+
+### 3.1 Problem
+
+The 27B prefill GEMM (`Q4_0_ROCMFP4_FAST`) reached only **27.5 TFLOPS** on the main projection shapes — 82% of f16 (33.3) on the same shapes, despite reading 3.7× fewer bytes at 4.25 bpw. Compared with gufo's published records for the same model class (prefill ≈ 2× llama.cpp), the gap was not in attention but in the GEMM itself.
+
+### 3.2 Investigation
+
+1. **Baseline** (`tests/test-backend-ops perf -o MUL_MAT`, 27B projection shapes): Q4 = 27.47 / 25.75 / 25.23 TFLOPS, f16 = 33.27 / 24.31 / 27.73.
+2. **Dispatch review** (`ggml/src/ggml-cuda/mmq-config-rdna3-5.cuh`): type 101 (`Q4_0_ROCMFP4_FAST`) entries used `MMQ_ITER_K=256`, while the FP4-specific `MMQ_ITER_K_FP4=512` (`mmq.cuh:10`) existed but was never referenced by the ROCmFP4 entries.
+3. **Variant measurements** (rebuild + same-session measurement each time):
+
+   | Variant | 17408×2048×5120 | Verdict |
+   |:--|--:|:--|
+   | baseline (256) | 27.90 TF | control |
+   | **iter512 (K=512)** | **53.33 TF (+90.6%)** | adopted |
+   | occ1 (occupancy 2→1) | 27.34 TF | rejected (no gain) |
+   | both (512 + occ1) | 52.57 TF | rejected (no stacking) |
+
+### 3.3 Root cause
+
+When type 101 was wired into MMQ, its config entries copied the generic K tile of 256 and missed the FP4-specific value — a pure configuration omission, not an algorithmic defect.
+
+### 3.4 Fix
+
+`ggml/src/ggml-cuda/mmq-config-rdna3-5.cuh`: 12 CASE entries for `Q4_0_ROCMFP4` / `Q4_0_ROCMFP4_FAST` switch `MMQ_ITER_K` to `MMQ_ITER_K_FP4`.
+
+### 3.5 Verification
+
+- **Numeric gates**: `MUL_MAT -p rocmfp4` **24/24**, `-p rocmfpx` **61/61**.
+- **End-to-end A/B** (Qwen3.8-27B Q4_0_ROCMFP4_FAST, same machine/model/protocol, back-to-back):
+
+  | Case | Before | After | Change |
+  |:--|--:|--:|--:|
+  | pp2048 | 433.5 t/s | **720.8 t/s** | **+66.3%** |
+  | pp16384 | 396.4 t/s | **613.5 t/s** | **+54.8%** |
+  | pp65536 | 295.0 t/s | **413.6 t/s** | **+40.2%** |
+  | tg256 | 14.04 t/s | 14.04 t/s | unchanged (decode uses MMVQ) |
+
+- **Cross-reference**: gufo's published records for the same model class are 656 / 575 / 387 (depths 0 / 16k / 64k); this version is 721 / 614 / 414 — above all three (different quant, same chip/model class).
+
+### 3.6 Boundaries and rejected items
+
+- **Not applicable to the fp8 family**: applying the same change to `Q2/Q3/Q6/Q8_0_ROCMFPX` lifts the kernel GEMM from 20.2 to 34.8 TF (+72~86%), but the numeric gate drops to **49/61** — every failing case is **k=1024** (ERR≈1.0, blocks completely wrong), while k=256/k=4096 pass. The K tile is bound to the SRAM layout (256-element super-block), so fixing it means changing block indexing/loaders — a separate change, not part of this version.
+- occ1 / both give no gain; rejected.
+
+### 3.7 Reproduction
+
+```bash
+# kernel case (the added 27B projection shapes)
+LD_LIBRARY_PATH=build/bin:/opt/rocm/core-10.1/lib \
+  build/bin/test-backend-ops perf -o MUL_MAT -p "m=17408,n=2048,k=5120"
+# numeric gate
+LD_LIBRARY_PATH=build/bin:/opt/rocm/core-10.1/lib build/bin/test-backend-ops test -o MUL_MAT -p "rocmfp4"
+# end to end
+build/bin/llama-bench -m <27B Q4_0_ROCMFP4_FAST.gguf> -p 2048 -n 0 -r 3
+```
+
+### 3.8 Deliverables
+
+- Code: `mmq-config-rdna3-5.cuh` (12 entries) + `tests/test-backend-ops.cpp` (new perf cases).
+- Numeric gate and end-to-end A/B data in `~/bench/gemm-e2e-1017/`, `~/bench/mmq-scan2-1017.log`.
+
+---
+
 ## Appendix: entry structure (follow for future kernel-level changes)
 
 1. Problem (with baseline numbers and applicable conditions)
