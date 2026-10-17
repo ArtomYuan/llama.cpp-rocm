@@ -774,7 +774,8 @@ static best_fattn_kernel ggml_cuda_get_best_fattn_kernel(const int device, const
                                   K->type == GGML_TYPE_Q8_0_ROCMFPX;
 
     if (is_rocmfp_family) {
-        if (can_use_vector_kernel && Q->ne[1] <= 2) {
+        // [exp-1016] preview: allow vector FA for prefill batches as well (was: Q->ne[1] <= 2)
+        if (can_use_vector_kernel) {
             return BEST_FATTN_KERNEL_VEC;
         }
         return BEST_FATTN_KERNEL_NONE;
