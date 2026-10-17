@@ -1,8 +1,8 @@
 # strix.cpp
 
-> 原名 `llama.cpp-rocm`（2026-10-17 更名）。旧链接由 GitHub 自动重定向。
+> 原名 `llama.cpp-rocm`（2026-10-17 更名）；旧链接由 GitHub 自动重定向，历史与发布线延续。
 
-面向 AMD Strix Halo（Ryzen AI MAX+ 395 / Radeon 8060S / gfx1151）的融合引擎：官方 llama.cpp master + **ROCmFPX 量化格式** + **多模态视觉塔**三合一。
+**为 AI MAX+ 395（Strix Halo / gfx1151）深度特调、原生支持 ROCmFPX 的 llama.cpp 引擎。**
 
 [English](README.en.md)
 
@@ -10,26 +10,28 @@
 
 ## 这是什么
 
-llama.cpp 的独立维护分支，把三个能力整合到一个引擎：
+strix.cpp 是 llama.cpp 的独立维护分支。在「官方同步 + ROCmFPX 量化 + 多模态视觉」的融合底座之上，**针对 gfx1151 做内核级深度特调**——这是本引擎区别于其他 llama.cpp 分支的立身之本。
 
-| 来源 | 能力 |
+| 支柱 | 内容 |
 |---|---|
-| 官方 llama.cpp（持续同步 master） | 全部基础推理能力 |
-| charlie12345/ROCmFPX | ROCmFPX 量化格式（ROCmFP2/3/4/6/8 + TurboQuant） |
-| yuuko-eth mtmd-grounders | 多模态视觉塔（含 LocateAnything 定位投影器） |
-
-- 当前同步上游点：ggml-org/llama.cpp `091b6a7fc`（2026-10-14，窗口 `f072b10371..091b6a7fc` = 552 commits，merge commit `b5a7b6118`）。
+| 官方 llama.cpp（持续同步 master） | 全部基础推理能力；当前同步点 `091b6a7fc`（2026-10-14，窗口 552 commits，merge commit `b5a7b6118`） |
+| ROCmFPX 量化 | ROCmFP2/3/4/6/8 + TurboQuant（GGML 类型 100-107），上游无法加载 |
+| 多模态视觉 | mtmd 视觉栈 + LocateAnything 定位投影器（`--special` 输出 `<ref>/<box>`） |
+| **gfx1151 深度特调** | 注意力内核配置分裂、MMQ 全量化路径、无分支热路径解码（见下节） |
 
 **一个二进制**：ROCmFPX 量化模型（文本）+ 视觉/定位模型都能跑，无需切换引擎。
 
-## 与上游的不同
+## 特调明细（gfx1151）
 
-- **ROCmFPX 量化支持**：上游 llama.cpp 无法加载 ROCmFP4/FP8 格式——本引擎原生支持（GGML 类型100-107），并带量化工具 `llama-quantize`；fp8 家族（Q2/Q3/Q6/Q8_0_ROCMFPX）含 GPU 计算路径（MMVQ + MMQ，RDNA3.5）
-- **多模态视觉**：合并 mtmd 视觉栈，支持视觉模型与 Grounding 定位模型（`--special` 模式输出 `<ref>/<box>`）
-- **纯 ROCm HIP 后端**：构建仅含 HIP（无 Vulkan），设备锁定 ROCm0——无后端选择歧义
-- **MMQ 决策**：MMQ 默认开启（含 MoE）；prefill 实测约 2×（pp512 +105%、pp2048 +109%，2026-09-15 实测）。历史「未就绪/禁用」表述系基于错误口径（旧 69.17 vs 67.26 是 tg32/batch-1 口径，走 MMVQ 不经过 MMQ），已勘误。
-- **注意力内核特调（gfx1151）**：FA 配置按 `(ncols1,ncols2)` 分裂——`(8,8)` 与 `(16,4)` 实例启用 512 线程配置（寄存器溢出 −60%），kv=16k 深上下文 **+20~23%**；其余形状（含 `(32,2)` 家族）保持 stock 256 线程。
-- **无上游 CI**：官方 CI 矩阵已移除（本库本地构建验证）
+每项都经「同刻背靠背 A/B + 字节等价 + 数值门」验证，定位过程与复现命令见[内核优化记录](docs/development/kernel-optimization.md)。
+
+| 特调项 | 内容 | 实测收益 |
+|---|---|---|
+| **注意力内核配置分裂** | FA 配置按 `(ncols1,ncols2)` 分键：仅 `(8,8)` 与 `(16,4)` 实例启用 512 线程配置（寄存器溢出 −60%），其余形状保持 stock 256 线程 | kv=16k 深上下文 **+22.6% / +20.2%**；P1 `(32,2)` 形状零代价 |
+| 无分支热路径解码（fp8 家族） | ue4m3 scale 解码去分支 | prefill **+11.4%**（Q8_0_ROCMFPX pp2048） |
+| MMQ 全量化路径 | RDNA3.5 的 MMVQ + MMQ 四层接线（含 MoE） | prefill 约 **2×**（pp512 +105%、pp2048 +109%） |
+| KV 量化线 | TURBO3_0/TURBO4_0 + q4fast 权衡档 | q6x 深上下文 d4k **11.7 → 724 t/s**（62×） |
+| 纯 ROCm HIP 后端 | 仅 HIP（无 Vulkan），设备锁定 ROCm0 | 无后端选择歧义 |
 
 ## 功能
 
@@ -125,5 +127,6 @@ ExecStart=/path/to/engine/bin/llama-server --special -m /path/to/model.gguf --po
 ## 已知限制
 
 - 双尺度 `Q4_0_ROCMFP4`（非 `_FAST`）：MMQ 数值缺陷已在 v2026.9.16 修复；旧版本可设 `GGML_HIP_NO_ROCMFP4_MMQ=1` 规避。
+- **深水精度边缘**：f16 KV 的注意力在 kv≥32k 时与 f32 参考的误差随深度增长（32k ≈ 8e-4、64k ≈ 1.5e-3、131k ≈ 3.2e-3；套件阈值 5e-4）。属既有行为（stock 同款），对模型输出影响 ~0.1~0.3% 量级——超长上下文重负载场景请留意。
 
 > 开发文档：[内核优化记录](docs/development/kernel-optimization.md)（本库内核级改动的定位、修复与验证）；贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
