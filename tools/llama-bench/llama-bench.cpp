@@ -518,6 +518,27 @@ static ggml_type ggml_type_from_name(const std::string & s) {
     if (s == "iq4_nl") {
         return GGML_TYPE_IQ4_NL;
     }
+    if (s == "q4_0_rocmfp4") {
+        return GGML_TYPE_Q4_0_ROCMFP4;
+    }
+    if (s == "q4_0_rocmfp4_fast") {
+        return GGML_TYPE_Q4_0_ROCMFP4_FAST;
+    }
+    if (s == "q3_0_rocmfpx") {
+        return GGML_TYPE_Q3_0_ROCMFPX;
+    }
+    if (s == "q6_0_rocmfpx") {
+        return GGML_TYPE_Q6_0_ROCMFPX;
+    }
+    if (s == "q8_0_rocmfpx") {
+        return GGML_TYPE_Q8_0_ROCMFPX;
+    }
+    if (s == "turbo3_0") {
+        return GGML_TYPE_TURBO3_0;
+    }
+    if (s == "turbo4_0") {
+        return GGML_TYPE_TURBO4_0;
+    }
 
     return GGML_TYPE_COUNT;
 }
