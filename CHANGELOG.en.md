@@ -2,11 +2,15 @@
 
 [简体中文](CHANGELOG.md)
 
-## [Unreleased]
+## [v2026.10.17] (2026-10-17)
 
 ### Rename
 
 - **Project renamed: `llama.cpp-rocm` → `strix.cpp`** (GitHub: `ArtomYuan/strix.cpp`; old links redirect via GitHub 301).
+
+### Performance
+
+- **Attention kernel config split (512 threads)**: the FA config table is now keyed by `(ncols1,ncols2)` - only `(256,256,8,8)` and `(256,256,16,4)` use `512thr/occ1/combine32`, all other shapes stay on stock 256 threads. Host/device decisions use a twin-helper pattern (device-side macro, host-side runtime `amd_wmma_available(cc)`) to avoid a config mismatch caused by device-only macros being invisible in the host pass. Measured (same-moment A/B): kv=16k gqa8 **11.48->14.08 TFLOPS (+22.6%)**, `(16,4)` **8.84->10.63 (+20.2%)**, P1 `(32,2)` neutral, 32k/64k deep contexts +4%; numerics 148/152 (4 failures are the pre-existing kv>=32k precision edge, same on stock). See `docs/development/kernel-optimization.en.md` section 2.
 
 ### Engine
 

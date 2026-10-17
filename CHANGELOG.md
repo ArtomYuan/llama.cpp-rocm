@@ -2,11 +2,15 @@
 
 [English](CHANGELOG.en.md)
 
-## [Unreleased]
+## [v2026.10.17] (2026-10-17)
 
 ### 更名
 
 - **项目更名：`llama.cpp-rocm` → `strix.cpp`**（GitHub 仓库 `ArtomYuan/strix.cpp`；旧链接由 GitHub 301 自动重定向）。
+
+### 性能
+
+- **注意力内核配置分裂（512 线程）**：FA 配置表按 `(ncols1,ncols2)` 分键，仅 `(256,256,8,8)` 与 `(256,256,16,4)` 启用 `512thr/occ1/combine32`，其余形状保持 stock 256 线程。主机/设备判定拆为双 helper（设备侧宏、主机侧运行时 `amd_wmma_available(cc)`），规避设备宏在主机编译趟不可见导致的配置错位。实测（同刻背靠背）：kv=16k gqa8 **11.48→14.08 TFLOPS（+22.6%）**、`(16,4)` **8.84→10.63（+20.2%）**、P1 `(32,2)` 持平、32k/64k 深水 +4%；数值门 148/152（4 挂为 kv≥32k 既有精度边缘，stock 同款）。详见 `docs/development/kernel-optimization.md` 第 2 节。
 
 ### 引擎
 
